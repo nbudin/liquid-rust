@@ -233,9 +233,7 @@ impl Filter for WhereFilter {
                 return Ok(Value::Nil);
             }
         } else if !input.is_object() {
-            return Err(invalid_input(
-                "Array of objects or a single object expected",
-            ));
+            return Ok(Value::Nil);
         }
 
         let input = as_sequence(input);
