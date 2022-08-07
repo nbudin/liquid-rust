@@ -351,6 +351,10 @@ impl Filter for MapFilter {
     fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
         let args = self.args.evaluate(runtime)?;
 
+        if input.is_nil() {
+            return Ok(Value::array([]));
+        }
+
         let array = input
             .as_array()
             .ok_or_else(|| invalid_input("Array expected"))?;
