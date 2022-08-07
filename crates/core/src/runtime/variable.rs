@@ -1,8 +1,8 @@
 use std::fmt;
 
 use crate::error::{Error, Result};
-use crate::model::Path;
 use crate::model::Scalar;
+use crate::model::{Path, ScalarCow};
 use crate::model::{ValueCow, ValueView};
 
 use super::Expression;
@@ -51,17 +51,21 @@ impl Variable {
         path.reserve(self.indexes.len());
         for expr in &self.indexes {
             let v = expr.evaluate(runtime)?;
-            let s = match v {
-                ValueCow::Owned(v) => v.into_scalar(),
-                ValueCow::Borrowed(v) => v.as_scalar(),
+            if v.is_nil() {
+                path.push(ScalarCow::new(""));
+            } else {
+                let s = match v {
+                    ValueCow::Owned(v) => v.into_scalar(),
+                    ValueCow::Borrowed(v) => v.as_scalar(),
+                }
+                .ok_or_else(|| {
+                    let v = expr.evaluate(runtime).expect("lookup already verified");
+                    let v = v.source();
+                    let msg = format!("Expected scalar, found `{}`", v);
+                    Error::with_msg(msg)
+                })?;
+                path.push(s);
             }
-            .ok_or_else(|| {
-                let v = expr.evaluate(runtime).expect("lookup already verified");
-                let v = v.source();
-                let msg = format!("Expected scalar, found `{}`", v);
-                Error::with_msg(msg)
-            })?;
-            path.push(s);
         }
         Ok(path)
     }
