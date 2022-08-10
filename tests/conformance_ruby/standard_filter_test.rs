@@ -1,3 +1,5 @@
+use liquid::ValueView;
+
 use crate::test_helper::*;
 
 #[test]
@@ -1274,8 +1276,16 @@ fn test_where_non_array_map_input() {
 
 #[test]
 fn test_where_indexable_but_non_map_value() {
-    liquid_core::call_filter!(liquid_lib::stdlib::Where, 1, "ok", true).unwrap_err();
-    liquid_core::call_filter!(liquid_lib::stdlib::Where, 1, "ok").unwrap_err();
+    assert!(
+        liquid_core::call_filter!(liquid_lib::stdlib::Where, 1, "ok", true)
+            .unwrap()
+            .is_nil()
+    );
+    assert!(
+        liquid_core::call_filter!(liquid_lib::stdlib::Where, 1, "ok")
+            .unwrap()
+            .is_nil()
+    );
 }
 
 #[test]

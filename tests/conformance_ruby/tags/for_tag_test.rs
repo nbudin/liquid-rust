@@ -469,7 +469,6 @@ fn test_for_parentloop_references_parent_loop() {
 }
 
 #[test]
-#[should_panic] // liquid-rust#271
 fn test_for_parentloop_nil_when_not_present() {
     assert_template_result!(
         ".1 .2 ",
