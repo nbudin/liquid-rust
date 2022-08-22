@@ -280,6 +280,8 @@ fn contains_check(a: &dyn ValueView, b: &dyn ValueView) -> Result<bool> {
             }
         }
         Ok(false)
+    } else if a.is_nil() {
+        Ok(false)
     } else {
         Err(unexpected_value_error(
             "string | array | object",
