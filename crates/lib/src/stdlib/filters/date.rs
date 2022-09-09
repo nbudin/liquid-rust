@@ -1,5 +1,8 @@
+use std::rc::Rc;
+
 use liquid_core::Expression;
 use liquid_core::Runtime;
+use liquid_core::ValueCow;
 use liquid_core::{
     Display_filter, Filter, FilterParameters, FilterReflection, FromFilterParameters, ParseFilter,
 };
@@ -29,7 +32,11 @@ struct DateFilter {
 }
 
 impl Filter for DateFilter {
-    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate<'s>(
+        &'s self,
+        input: &'s dyn ValueView,
+        runtime: &'s dyn Runtime,
+    ) -> Result<ValueCow<'s>> {
         let args = self.args.evaluate(runtime)?;
 
         let date = input.as_scalar().and_then(|s| s.to_date_time());
@@ -39,9 +46,9 @@ impl Filter for DateFilter {
                     Error::with_msg(format!("Invalid date-format string: {}", args.format))
                 })?;
 
-                Ok(Value::scalar(s))
+                Ok(ValueCow::Owned(Value::scalar(s)))
             }
-            _ => Ok(input.to_value()),
+            _ => Ok(ValueCow::Rc(Rc::new(input))),
         }
     }
 }

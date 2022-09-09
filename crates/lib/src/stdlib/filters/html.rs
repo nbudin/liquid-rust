@@ -1,5 +1,6 @@
 use liquid_core::Result;
 use liquid_core::Runtime;
+use liquid_core::ValueCow;
 use liquid_core::{Display_filter, Filter, FilterReflection, ParseFilter};
 use liquid_core::{Value, ValueView};
 use regex::Regex;
@@ -75,8 +76,12 @@ pub struct Escape;
 struct EscapeFilter;
 
 impl Filter for EscapeFilter {
-    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
-        escape(input, false)
+    fn evaluate<'s>(
+        &'s self,
+        input: &'s dyn ValueView,
+        runtime: &'s dyn Runtime,
+    ) -> Result<ValueCow<'s>> {
+        escape(input, false).map(ValueCow::Owned)
     }
 }
 
@@ -93,8 +98,12 @@ pub struct EscapeOnce;
 struct EscapeOnceFilter;
 
 impl Filter for EscapeOnceFilter {
-    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
-        escape(input, true)
+    fn evaluate<'s>(
+        &'s self,
+        input: &'s dyn ValueView,
+        runtime: &'s dyn Runtime,
+    ) -> Result<ValueCow<'s>> {
+        escape(input, true).map(ValueCow::Owned)
     }
 }
 
@@ -120,13 +129,17 @@ static MATCHERS: once_cell::sync::Lazy<[Regex; 4]> = once_cell::sync::Lazy::new(
 });
 
 impl Filter for StripHtmlFilter {
-    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate<'s>(
+        &'s self,
+        input: &'s dyn ValueView,
+        runtime: &'s dyn Runtime,
+    ) -> Result<ValueCow<'s>> {
         let input = input.to_kstr().into_string();
 
         let result = MATCHERS.iter().fold(input, |acc, matcher| {
             matcher.replace_all(&acc, "").into_owned()
         });
-        Ok(Value::scalar(result))
+        Ok(ValueCow::Owned(Value::scalar(result)))
     }
 }
 
@@ -143,10 +156,16 @@ pub struct NewlineToBr;
 struct NewlineToBrFilter;
 
 impl Filter for NewlineToBrFilter {
-    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate<'s>(
+        &'s self,
+        input: &'s dyn ValueView,
+        runtime: &'s dyn Runtime,
+    ) -> Result<ValueCow<'s>> {
         // TODO handle windows line endings
         let input = input.to_kstr();
-        Ok(Value::scalar(input.replace('\n', "<br />\n")))
+        Ok(ValueCow::Owned(Value::scalar(
+            input.replace('\n', "<br />\n"),
+        )))
     }
 }
 

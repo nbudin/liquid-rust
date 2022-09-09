@@ -1,7 +1,9 @@
 use std::cmp::Ordering;
 use std::fmt;
+use std::rc::Rc;
 
 use crate::model::KStringCow;
+use crate::ValueCow;
 
 use super::DisplayCow;
 use super::State;
@@ -174,62 +176,62 @@ fn forward(o: &Option<impl ValueView>) -> &dyn ValueView {
 }
 
 /// `Value` comparison semantics for types implementing `ValueView`.
-#[derive(Copy, Clone, Debug)]
-pub struct ValueViewCmp<'v>(&'v dyn ValueView);
+#[derive(Clone, Debug)]
+pub struct ValueViewCmp<'v>(ValueCow<'v>);
 
 impl<'v> ValueViewCmp<'v> {
     /// `Value` comparison semantics for types implementing `ValueView`.
-    pub fn new(v: &dyn ValueView) -> ValueViewCmp<'_> {
+    pub fn new(v: ValueCow<'v>) -> ValueViewCmp<'_> {
         ValueViewCmp(v)
     }
 }
 
 impl<'v> PartialEq<ValueViewCmp<'v>> for ValueViewCmp<'v> {
     fn eq(&self, other: &Self) -> bool {
-        value_eq(self.0, other.0)
+        value_eq(self.0.as_view(), other.0.as_view())
     }
 }
 
 impl<'v> PartialEq<i64> for ValueViewCmp<'v> {
     fn eq(&self, other: &i64) -> bool {
-        super::value_eq(self.0, other)
+        super::value_eq(self.0.as_view(), other)
     }
 }
 
 impl<'v> PartialEq<f64> for ValueViewCmp<'v> {
     fn eq(&self, other: &f64) -> bool {
-        super::value_eq(self.0, other)
+        super::value_eq(self.0.as_view(), other)
     }
 }
 
 impl<'v> PartialEq<bool> for ValueViewCmp<'v> {
     fn eq(&self, other: &bool) -> bool {
-        super::value_eq(self.0, other)
+        super::value_eq(self.0.as_view(), other)
     }
 }
 
 impl<'v> PartialEq<crate::model::scalar::DateTime> for ValueViewCmp<'v> {
     fn eq(&self, other: &crate::model::scalar::DateTime) -> bool {
-        super::value_eq(self.0, other)
+        super::value_eq(self.0.as_view(), other)
     }
 }
 
 impl<'v> PartialEq<crate::model::scalar::Date> for ValueViewCmp<'v> {
     fn eq(&self, other: &crate::model::scalar::Date) -> bool {
-        super::value_eq(self.0, other)
+        super::value_eq(self.0.as_view(), other)
     }
 }
 
 impl<'v> PartialEq<str> for ValueViewCmp<'v> {
     fn eq(&self, other: &str) -> bool {
         let other = KStringCow::from_ref(other);
-        super::value_eq(self.0, &other)
+        super::value_eq(self.0.as_view(), &other)
     }
 }
 
 impl<'v> PartialEq<&'v str> for ValueViewCmp<'v> {
     fn eq(&self, other: &&str) -> bool {
-        super::value_eq(self.0, other)
+        super::value_eq(self.0.as_view(), other)
     }
 }
 
@@ -241,25 +243,25 @@ impl<'v> PartialEq<String> for ValueViewCmp<'v> {
 
 impl<'v> PartialEq<crate::model::KString> for ValueViewCmp<'v> {
     fn eq(&self, other: &crate::model::KString) -> bool {
-        super::value_eq(self.0, &other.as_ref())
+        super::value_eq(self.0.as_view(), &other.as_ref())
     }
 }
 
 impl<'v> PartialEq<crate::model::KStringRef<'v>> for ValueViewCmp<'v> {
     fn eq(&self, other: &crate::model::KStringRef<'v>) -> bool {
-        super::value_eq(self.0, other)
+        super::value_eq(self.0.as_view(), other)
     }
 }
 
 impl<'v> PartialEq<crate::model::KStringCow<'v>> for ValueViewCmp<'v> {
     fn eq(&self, other: &crate::model::KStringCow<'v>) -> bool {
-        super::value_eq(self.0, other)
+        super::value_eq(self.0.as_view(), other)
     }
 }
 
 impl<'v> PartialOrd<ValueViewCmp<'v>> for ValueViewCmp<'v> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        value_cmp(self.0, other.0)
+        value_cmp(self.0.as_view(), other.0.as_view())
     }
 }
 
@@ -268,16 +270,17 @@ pub(crate) fn value_eq(lhs: &dyn ValueView, rhs: &dyn ValueView) -> bool {
         if x.size() != y.size() {
             return false;
         }
-        return x.values().zip(y.values()).all(|(x, y)| value_eq(x, y));
+        return x.values().zip(y.values()).all(|(x, y)| value_eq(&x, &y));
     }
 
     if let (Some(x), Some(y)) = (lhs.as_object(), rhs.as_object()) {
         if x.size() != y.size() {
             return false;
         }
-        return x
-            .iter()
-            .all(|(key, value)| y.get(key.as_str()).map_or(false, |v| value_eq(v, value)));
+        return x.iter().all(|(key, value)| {
+            y.get(key.as_str())
+                .map_or(false, |v| value_eq(v.as_view(), value.as_view()))
+        });
     }
 
     if lhs.is_nil() && rhs.is_nil() {
@@ -328,8 +331,11 @@ pub(crate) fn value_cmp(lhs: &dyn ValueView, rhs: &dyn ValueView) -> Option<Orde
     if let (Some(x), Some(y)) = (lhs.as_object(), rhs.as_object()) {
         return x
             .iter()
-            .map(|(k, v)| (k, ValueViewCmp(v)))
-            .partial_cmp(y.iter().map(|(k, v)| (k, ValueViewCmp(v))));
+            .map(|(k, v)| (k, ValueViewCmp(ValueCow::Rc(Rc::new(v)))))
+            .partial_cmp(
+                y.iter()
+                    .map(|(k, v)| (k, ValueViewCmp(ValueCow::Rc(Rc::new(v))))),
+            );
     }
 
     None
@@ -341,7 +347,7 @@ mod test {
 
     #[test]
     fn test_debug() {
-        let scalar = 5;
+        let scalar: i64 = 5;
         println!("{:?}", scalar);
         let view: &dyn ValueView = &scalar;
         println!("{:?}", view);

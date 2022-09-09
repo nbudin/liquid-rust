@@ -138,10 +138,10 @@ pub fn core_derive(input: &DeriveInput) -> TokenStream {
                 }
             }
 
-            fn get<'liquid_derive_s>(&'liquid_derive_s self, index: &str) -> Option<&'liquid_derive_s dyn ::liquid_core::ValueView> {
+            fn get<'liquid_derive_s>(&'liquid_derive_s self, index: &str) -> Option<::liquid_core::ValueCow> {
                 match index {
                     #(
-                        stringify!(#fields) => Some(&self.#fields),
+                        stringify!(#fields) => Some(ValueCow::Rc(Rc::new(&self.#fields))),
                     )*
                     _ => None,
                 }

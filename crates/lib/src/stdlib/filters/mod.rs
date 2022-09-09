@@ -1,6 +1,9 @@
+use std::rc::Rc;
+
 use liquid_core::Expression;
 use liquid_core::Result;
 use liquid_core::Runtime;
+use liquid_core::ValueCow;
 use liquid_core::{
     Display_filter, Filter, FilterParameters, FilterReflection, FromFilterParameters, ParseFilter,
 };
@@ -43,15 +46,19 @@ pub struct Size;
 struct SizeFilter;
 
 impl Filter for SizeFilter {
-    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate<'s>(
+        &'s self,
+        input: &'s dyn ValueView,
+        runtime: &'s dyn Runtime,
+    ) -> Result<ValueCow<'s>> {
         if let Some(x) = input.as_scalar() {
-            Ok(Value::scalar(x.to_kstr().len() as i64))
+            Ok(ValueCow::Owned(Value::scalar(x.to_kstr().len() as i64)))
         } else if let Some(x) = input.as_array() {
-            Ok(Value::scalar(x.size()))
+            Ok(ValueCow::Owned(Value::scalar(x.size())))
         } else if let Some(x) = input.as_object() {
-            Ok(Value::scalar(x.size()))
+            Ok(ValueCow::Owned(Value::scalar(x.size())))
         } else {
-            Ok(Value::scalar(0i64))
+            Ok(ValueCow::Owned(Value::scalar(0i64)))
         }
     }
 }
@@ -79,13 +86,17 @@ struct DefaultFilter {
 }
 
 impl Filter for DefaultFilter {
-    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate<'s>(
+        &'s self,
+        input: &'s dyn ValueView,
+        runtime: &'s dyn Runtime,
+    ) -> Result<ValueCow<'s>> {
         let args = self.args.evaluate(runtime)?;
 
         if input.query_state(liquid_core::model::State::DefaultValue) {
-            Ok(args.default.to_value())
+            Ok(args.default)
         } else {
-            Ok(input.to_value())
+            Ok(ValueCow::Rc(Rc::new(input)))
         }
     }
 }

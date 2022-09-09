@@ -1,5 +1,6 @@
 use std::fmt;
 use std::io::Write;
+use std::rc::Rc;
 
 use liquid_core::error::{ResultLiquidExt, ResultLiquidReplaceExt};
 use liquid_core::model::{Object, ObjectView, Value, ValueCow, ValueView};
@@ -576,7 +577,7 @@ impl<'r> Range<'r> {
 
 fn get_array(array: &dyn ValueView) -> Result<Vec<ValueCow<'_>>> {
     if let Some(x) = array.as_array() {
-        Ok(x.values().map(|v| ValueCow::Borrowed(v)).collect())
+        Ok(x.values().map(|v| ValueCow::Rc(Rc::new(v))).collect())
     } else if let Some(x) = array.as_object() {
         let x = x
             .iter()
@@ -965,8 +966,10 @@ mod test {
     pub struct ShoutFilter;
 
     impl Filter for ShoutFilter {
-        fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
-            Ok(Value::scalar(input.to_kstr().to_uppercase()))
+        fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<ValueCow> {
+            Ok(ValueCow::Owned(Value::scalar(
+                input.to_kstr().to_uppercase(),
+            )))
         }
     }
 

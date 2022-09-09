@@ -1,4 +1,5 @@
 use std::cmp;
+use std::rc::Rc;
 
 use liquid_core::model::ValueViewCmp;
 use liquid_core::Expression;
@@ -47,7 +48,11 @@ struct JoinFilter {
 }
 
 impl Filter for JoinFilter {
-    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate<'s>(
+        &'s self,
+        input: &'s dyn ValueView,
+        runtime: &'s dyn Runtime,
+    ) -> Result<ValueCow<'s>> {
         let args = self.args.evaluate(runtime)?;
 
         let separator = args.separator.unwrap_or_else(|| " ".into());
@@ -57,7 +62,10 @@ impl Filter for JoinFilter {
             .ok_or_else(|| invalid_input("Array of strings expected"))?;
         let input = input.values().map(|x| x.to_kstr());
 
-        Ok(Value::scalar(itertools::join(input, separator.as_str())))
+        Ok(ValueCow::Owned(Value::scalar(itertools::join(
+            input,
+            separator.as_str(),
+        ))))
     }
 }
 
@@ -112,15 +120,19 @@ struct SortFilter {
     args: PropertyArgs,
 }
 
-fn safe_property_getter<'a>(value: &'a Value, property: &str) -> &'a dyn ValueView {
+fn safe_property_getter<'a>(value: &'a dyn ValueView, property: &str) -> ValueCow<'a> {
     value
         .as_object()
         .and_then(|obj| obj.get(property))
-        .unwrap_or(&Value::Nil)
+        .unwrap_or(ValueCow::Owned(Value::Nil))
 }
 
 impl Filter for SortFilter {
-    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate<'s>(
+        &'s self,
+        input: &'s dyn ValueView,
+        runtime: &'s dyn Runtime,
+    ) -> Result<ValueCow<'s>> {
         let args = self.args.evaluate(runtime)?;
 
         let input: Vec<_> = as_sequence(input).collect();
@@ -128,20 +140,20 @@ impl Filter for SortFilter {
             return Err(invalid_input("Array of objects expected"));
         }
 
-        let mut sorted: Vec<Value> = input.iter().map(|v| v.to_value()).collect();
+        let mut sorted: Vec<&dyn ValueView> = input.into_iter().collect();
         if let Some(property) = &args.property {
             // Using unwrap is ok since all of the elements are objects
             sorted.sort_by(|a, b| {
                 nil_safe_compare(
-                    safe_property_getter(a, property),
-                    safe_property_getter(b, property),
+                    safe_property_getter(a, property).as_view(),
+                    safe_property_getter(b, property).as_view(),
                 )
                 .unwrap_or(cmp::Ordering::Equal)
             });
         } else {
             sorted.sort_by(|a, b| nil_safe_compare(a, b).unwrap_or(cmp::Ordering::Equal));
         }
-        Ok(Value::array(sorted))
+        Ok(ValueCow::Rc(Rc::new(sorted)))
     }
 }
 
@@ -162,7 +174,11 @@ struct SortNaturalFilter {
 }
 
 impl Filter for SortNaturalFilter {
-    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate<'s>(
+        &'s self,
+        input: &'s dyn ValueView,
+        runtime: &'s dyn Runtime,
+    ) -> Result<ValueCow<'s>> {
         let args = self.args.evaluate(runtime)?;
 
         let input: Vec<_> = as_sequence(input).collect();
@@ -172,25 +188,18 @@ impl Filter for SortNaturalFilter {
 
         let mut sorted: Vec<_> = if let Some(property) = &args.property {
             input
-                .iter()
-                .map(|v| v.to_value())
-                .map(|v| {
-                    (
-                        nil_safe_casecmp_key(&safe_property_getter(&v, property).to_value()),
-                        v,
-                    )
-                })
+                .into_iter()
+                .map(|v| (nil_safe_casecmp_key(&safe_property_getter(&v, property)), v))
                 .collect()
         } else {
             input
-                .iter()
-                .map(|v| v.to_value())
+                .into_iter()
                 .map(|v| (nil_safe_casecmp_key(&v), v))
                 .collect()
         };
         sorted.sort_by(|a, b| nil_safe_casecmp(&a.0, &b.0).unwrap_or(cmp::Ordering::Equal));
         let result: Vec<_> = sorted.into_iter().map(|(_, v)| v).collect();
-        Ok(Value::array(result))
+        Ok(ValueCow::Rc(Rc::new(result)))
     }
 }
 
@@ -223,17 +232,21 @@ struct WhereFilter {
 }
 
 impl Filter for WhereFilter {
-    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate<'s>(
+        &'s self,
+        input: &'s dyn ValueView,
+        runtime: &'s dyn Runtime,
+    ) -> Result<ValueCow<'s>> {
         let args = self.args.evaluate(runtime)?;
         let property: &str = &args.property;
         let target_value: Option<ValueCow<'_>> = args.target_value;
 
         if let Some(array) = input.as_array() {
             if !array.values().all(|v| v.is_object()) {
-                return Ok(Value::Nil);
+                return Ok(ValueCow::Owned(Value::Nil));
             }
         } else if !input.is_object() {
-            return Ok(Value::Nil);
+            return Ok(ValueCow::Owned(Value::Nil));
         }
 
         let input = as_sequence(input);
@@ -245,20 +258,18 @@ impl Filter for WhereFilter {
                         .get(property)
                         .map_or(false, |v| v.query_state(liquid_core::model::State::Truthy))
                 })
-                .map(|object| object.to_value())
                 .collect(),
             Some(target_value) => input
                 .filter_map(|v| v.as_object())
                 .filter(|object| {
                     object.get(property).map_or(false, |value| {
-                        let value = ValueViewCmp::new(value);
+                        let value = ValueViewCmp::new(value.as_view());
                         target_value == value
                     })
                 })
-                .map(|object| object.to_value())
                 .collect(),
         };
-        Ok(Value::array(array))
+        Ok(ValueCow::Rc(Rc::new(array)))
     }
 }
 
@@ -278,22 +289,26 @@ pub struct Uniq;
 struct UniqFilter;
 
 impl Filter for UniqFilter {
-    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate<'s>(
+        &'s self,
+        input: &'s dyn ValueView,
+        runtime: &'s dyn Runtime,
+    ) -> Result<ValueCow<'s>> {
         // TODO(#267) optional property parameter
 
         let array = input
             .as_array()
             .ok_or_else(|| invalid_input("Array expected"))?;
-        let mut deduped: Vec<Value> = Vec::with_capacity(array.size() as usize);
+        let mut deduped: Vec<ValueCow> = Vec::with_capacity(array.size() as usize);
         for x in array.values() {
             if !deduped
                 .iter()
-                .any(|v| ValueViewCmp::new(v.as_view()) == ValueViewCmp::new(x))
+                .any(|v| ValueViewCmp::new(v) == ValueViewCmp::new(x.as_view()))
             {
-                deduped.push(x.to_value())
+                deduped.push(x)
             }
         }
-        Ok(Value::array(deduped))
+        Ok(ValueCow::Rc(Rc::new(deduped)))
     }
 }
 
@@ -310,15 +325,18 @@ pub struct Reverse;
 struct ReverseFilter;
 
 impl Filter for ReverseFilter {
-    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate<'s>(
+        &'s self,
+        input: &'s dyn ValueView,
+        runtime: &'s dyn Runtime,
+    ) -> Result<ValueCow<'s>> {
         let mut array: Vec<_> = input
             .as_array()
             .ok_or_else(|| invalid_input("Array expected"))?
             .values()
-            .map(|v| v.to_value())
             .collect();
         array.reverse();
-        Ok(Value::array(array))
+        Ok(ValueCow::Rc(Rc::new(array)))
     }
 }
 
@@ -348,11 +366,15 @@ struct MapFilter {
 }
 
 impl Filter for MapFilter {
-    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate<'s>(
+        &'s self,
+        input: &'s dyn ValueView,
+        runtime: &'s dyn Runtime,
+    ) -> Result<ValueCow<'s>> {
         let args = self.args.evaluate(runtime)?;
 
         if input.is_nil() {
-            return Ok(Value::array([]));
+            return Ok(ValueCow::Owned(Value::array([])));
         }
 
         let array = input
@@ -361,13 +383,9 @@ impl Filter for MapFilter {
 
         let result: Vec<_> = array
             .values()
-            .filter_map(|v| {
-                v.as_object()
-                    .and_then(|v| v.get(&args.property))
-                    .map(|v| v.to_value())
-            })
+            .filter_map(|v| v.as_object().and_then(|v| v.get(&args.property)))
             .collect();
-        Ok(Value::array(result))
+        Ok(ValueCow::Rc(Rc::new(result)))
     }
 }
 
@@ -388,7 +406,11 @@ struct CompactFilter {
 }
 
 impl Filter for CompactFilter {
-    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate<'s>(
+        &'s self,
+        input: &'s dyn ValueView,
+        runtime: &'s dyn Runtime,
+    ) -> Result<ValueCow<'s>> {
         let args = self.args.evaluate(runtime)?;
 
         let array = input
@@ -407,17 +429,12 @@ impl Filter for CompactFilter {
                         .and_then(|obj| obj.get(property.as_str()))
                         .map_or(true, |v| v.is_nil())
                 })
-                .map(|v| v.to_value())
                 .collect()
         } else {
-            array
-                .values()
-                .filter(|v| !v.is_nil())
-                .map(|v| v.to_value())
-                .collect()
+            array.values().filter(|v| !v.is_nil()).collect()
         };
 
-        Ok(Value::array(result))
+        Ok(ValueCow::Rc(Rc::new(array)))
     }
 }
 
@@ -444,23 +461,27 @@ struct ConcatFilter {
 }
 
 impl Filter for ConcatFilter {
-    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate<'s>(
+        &'s self,
+        input: &'s dyn ValueView,
+        runtime: &'s dyn Runtime,
+    ) -> Result<ValueCow<'s>> {
         let args = self.args.evaluate(runtime)?;
 
         let input = input
             .as_array()
             .ok_or_else(|| invalid_input("Array expected"))?;
-        let input = input.values().map(|v| v.to_value());
+        let input = input.values();
 
         let array = args
             .array
             .as_array()
             .ok_or_else(|| invalid_argument("array", "Array expected"))?;
-        let array = array.values().map(|v| v.to_value());
+        let array = array.values();
 
         let result = input.chain(array);
         let result: Vec<_> = result.collect();
-        Ok(Value::array(result))
+        Ok(ValueCow::Rc(Rc::new(result)))
     }
 }
 
@@ -477,7 +498,11 @@ pub struct First;
 struct FirstFilter;
 
 impl Filter for FirstFilter {
-    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate<'s>(
+        &'s self,
+        input: &'s dyn ValueView,
+        runtime: &'s dyn Runtime,
+    ) -> Result<ValueCow<'s>> {
         if let Some(x) = input.as_scalar() {
             let c = x
                 .to_kstr()
@@ -485,11 +510,9 @@ impl Filter for FirstFilter {
                 .next()
                 .map(|c| c.to_string())
                 .unwrap_or_else(|| "".to_owned());
-            Ok(Value::scalar(c))
+            Ok(ValueCow::Owned(Value::scalar(c)))
         } else if let Some(x) = input.as_array() {
-            Ok(x.first()
-                .map(|v| v.to_value())
-                .unwrap_or_else(|| Value::Nil))
+            Ok(x.first().unwrap_or_else(|| ValueCow::Owned(Value::Nil)))
         } else {
             Err(invalid_input("String or Array expected"))
         }
@@ -509,7 +532,11 @@ pub struct Last;
 struct LastFilter;
 
 impl Filter for LastFilter {
-    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate<'s>(
+        &'s self,
+        input: &'s dyn ValueView,
+        runtime: &'s dyn Runtime,
+    ) -> Result<ValueCow<'s>> {
         if let Some(x) = input.as_scalar() {
             let c = x
                 .to_kstr()
@@ -517,9 +544,9 @@ impl Filter for LastFilter {
                 .last()
                 .map(|c| c.to_string())
                 .unwrap_or_else(|| "".to_owned());
-            Ok(Value::scalar(c))
+            Ok(ValueCow::Owned(Value::scalar(c)))
         } else if let Some(x) = input.as_array() {
-            Ok(x.last().map(|v| v.to_value()).unwrap_or_else(|| Value::Nil))
+            Ok(x.last().unwrap_or_else(|| ValueCow::Owned(Value::Nil)))
         } else {
             Err(invalid_input("String or Array expected"))
         }

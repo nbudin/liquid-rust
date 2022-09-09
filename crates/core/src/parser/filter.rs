@@ -1,8 +1,9 @@
 use std::fmt::{Debug, Display};
 
 use crate::error::Result;
-use crate::model::{Value, ValueView};
+use crate::model::ValueView;
 use crate::runtime::{Expression, Runtime};
+use crate::ValueCow;
 
 /// A structure that holds the information of a single parameter in a filter.
 /// This includes its name, description and whether it is optional or required.
@@ -132,7 +133,7 @@ pub struct FilterArguments<'a> {
 /// }
 ///
 /// impl Filter for AtLeastFilter {
-///     fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+///     fn evaluate<'s>(&'s self, input: &'s dyn ValueView, runtime: &dyn Runtime) -> Result<ValueCow<'s>> {
 ///         // Evaluate the `FilterParameters`
 ///         let args = self.args.evaluate(runtime)?;
 ///
@@ -142,7 +143,11 @@ pub struct FilterArguments<'a> {
 /// ```
 pub trait Filter: Send + Sync + Debug + Display {
     // This will evaluate the expressions and evaluate the filter.
-    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value>;
+    fn evaluate<'s>(
+        &'s self,
+        input: &'s dyn ValueView,
+        runtime: &'s dyn Runtime,
+    ) -> Result<ValueCow<'s>>;
 }
 
 /// A trait to register a new filter in the `liquid::Parser`.

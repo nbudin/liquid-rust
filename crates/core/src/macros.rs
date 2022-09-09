@@ -393,6 +393,6 @@ macro_rules! call_filter {
         let input = $crate::value!($input);
 
         $crate::ParseFilter::parse(&$filter, args)
-            .and_then(|filter| $crate::Filter::evaluate(&*filter, &input, &runtime))
+            .and_then(|filter| $crate::Filter::evaluate(&*filter, &input, &runtime).map(|value_cow| value_cow.to_value()))
     }};
 }

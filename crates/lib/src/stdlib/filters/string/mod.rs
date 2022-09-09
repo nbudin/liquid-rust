@@ -1,6 +1,7 @@
 use liquid_core::Expression;
 use liquid_core::Result;
 use liquid_core::Runtime;
+use liquid_core::ValueCow;
 use liquid_core::{
     Display_filter, Filter, FilterParameters, FilterReflection, FromFilterParameters, ParseFilter,
 };
@@ -37,21 +38,25 @@ struct SplitFilter {
 }
 
 impl Filter for SplitFilter {
-    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate<'s>(
+        &'s self,
+        input: &'s dyn ValueView,
+        runtime: &'s dyn Runtime,
+    ) -> Result<ValueCow<'s>> {
         let args = self.args.evaluate(runtime)?;
 
         let input = input.to_kstr();
 
         if input.is_empty() {
-            Ok(Value::Array(Vec::new()))
+            Ok(ValueCow::Owned(Value::Array(Vec::new())))
         } else {
             // Split and construct resulting Array
-            Ok(Value::Array(
+            Ok(ValueCow::Owned(Value::Array(
                 input
                     .split(args.pattern.as_str())
                     .map(|s| Value::scalar(s.to_owned()))
                     .collect(),
-            ))
+            )))
         }
     }
 }

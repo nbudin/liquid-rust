@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use serde::{self, de::IntoDeserializer, Deserialize, Serialize};
 
 use super::{Value, ValueView};
@@ -6,6 +8,7 @@ use crate::model::ser::{SerError, SerializeMap, SerializeStructVariant, Serializ
 use crate::model::Object;
 use crate::model::{ArrayView, ObjectView};
 use crate::model::{KString, KStringCow};
+use crate::ValueCow;
 
 /// Convert a `T` into `liquid_core::model::Value`.
 ///
@@ -28,8 +31,8 @@ pub fn from_value<'a, T>(v: &'a dyn ValueView) -> Result<T, crate::error::Error>
 where
     T: Deserialize<'a>,
 {
-    let mut deserializer = ValueDeserializer::from_value(v);
-    T::deserialize(&mut deserializer).map_err(|e| e.into())
+    let deserializer = ValueDeserializer::from_value(v);
+    T::deserialize(deserializer).map_err(|e| e.into())
 }
 
 pub(crate) struct ValueSerializer;
@@ -300,16 +303,22 @@ impl serde::ser::SerializeTupleStruct for SerializeVec {
 
 #[allow(missing_debug_implementations)]
 pub(crate) struct ValueDeserializer<'de> {
-    input: &'de (dyn ValueView + 'de),
+    input: ValueCow<'de>,
 }
 
 impl<'de> ValueDeserializer<'de> {
     fn from_value(input: &'de (dyn ValueView + 'de)) -> Self {
+        Self {
+            input: ValueCow::Rc(Rc::new(input)),
+        }
+    }
+
+    fn from_value_cow(input: ValueCow<'de>) -> Self {
         Self { input }
     }
 }
 
-impl<'de, 'a> serde::Deserializer<'de> for &'a mut ValueDeserializer<'de> {
+impl<'de> serde::Deserializer<'de> for ValueDeserializer<'de> {
     type Error = SerError;
 
     fn deserialize_any<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -333,7 +342,7 @@ impl<'de, 'a> serde::Deserializer<'de> for &'a mut ValueDeserializer<'de> {
         } else if self.input.is_state() || self.input.is_nil() {
             self.deserialize_unit(visitor)
         } else {
-            Err(SerError::unknown_type(self.input))
+            Err(SerError::unknown_type(self.input.as_view()))
         }
     }
 
@@ -344,10 +353,10 @@ impl<'de, 'a> serde::Deserializer<'de> for &'a mut ValueDeserializer<'de> {
         let scalar = self
             .input
             .as_scalar()
-            .ok_or_else(|| SerError::invalid_type(self.input, "bool"))?;
+            .ok_or_else(|| SerError::invalid_type(self.input.as_view(), "bool"))?;
         let v = scalar
             .to_bool()
-            .ok_or_else(|| SerError::invalid_type(self.input, "bool"))?;
+            .ok_or_else(|| SerError::invalid_type(self.input.as_view(), "bool"))?;
         visitor.visit_bool(v)
     }
 
@@ -376,10 +385,10 @@ impl<'de, 'a> serde::Deserializer<'de> for &'a mut ValueDeserializer<'de> {
         let scalar = self
             .input
             .as_scalar()
-            .ok_or_else(|| SerError::invalid_type(self.input, "integer"))?;
+            .ok_or_else(|| SerError::invalid_type(self.input.as_view(), "integer"))?;
         let v = scalar
             .to_integer()
-            .ok_or_else(|| SerError::invalid_type(self.input, "integer"))?;
+            .ok_or_else(|| SerError::invalid_type(self.input.as_view(), "integer"))?;
         visitor.visit_i64(v)
     }
     fn deserialize_u8<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -420,10 +429,10 @@ impl<'de, 'a> serde::Deserializer<'de> for &'a mut ValueDeserializer<'de> {
         let scalar = self
             .input
             .as_scalar()
-            .ok_or_else(|| SerError::invalid_type(self.input, "float"))?;
+            .ok_or_else(|| SerError::invalid_type(self.input.as_view(), "float"))?;
         let v = scalar
             .to_float()
-            .ok_or_else(|| SerError::invalid_type(self.input, "float"))?;
+            .ok_or_else(|| SerError::invalid_type(self.input.as_view(), "float"))?;
         visitor.visit_f64(v)
     }
 
@@ -435,7 +444,7 @@ impl<'de, 'a> serde::Deserializer<'de> for &'a mut ValueDeserializer<'de> {
         if let Some(c) = s.as_str().chars().next() {
             visitor.visit_char(c)
         } else {
-            Err(SerError::invalid_type(self.input, "char"))
+            Err(SerError::invalid_type(self.input.as_view(), "char"))
         }
     }
     fn deserialize_str<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -445,7 +454,7 @@ impl<'de, 'a> serde::Deserializer<'de> for &'a mut ValueDeserializer<'de> {
         let scalar = self
             .input
             .as_scalar()
-            .ok_or_else(|| SerError::invalid_type(self.input, "string"))?;
+            .ok_or_else(|| SerError::invalid_type(self.input.as_view(), "string"))?;
         match scalar.into_cow_str() {
             std::borrow::Cow::Borrowed(s) => visitor.visit_borrowed_str(s),
             std::borrow::Cow::Owned(s) => visitor.visit_string(s),
@@ -461,13 +470,13 @@ impl<'de, 'a> serde::Deserializer<'de> for &'a mut ValueDeserializer<'de> {
     where
         V: serde::de::Visitor<'de>,
     {
-        Err(SerError::invalid_type(self.input, "bytes"))
+        Err(SerError::invalid_type(self.input.as_view(), "bytes"))
     }
     fn deserialize_byte_buf<V>(self, _visitor: V) -> Result<V::Value, Self::Error>
     where
         V: serde::de::Visitor<'de>,
     {
-        Err(SerError::invalid_type(self.input, "bytes"))
+        Err(SerError::invalid_type(self.input.as_view(), "bytes"))
     }
 
     fn deserialize_option<V>(self, visitor: V) -> Result<V::Value, Self::Error>
@@ -487,7 +496,7 @@ impl<'de, 'a> serde::Deserializer<'de> for &'a mut ValueDeserializer<'de> {
         if self.input.is_state() || self.input.is_nil() {
             visitor.visit_unit()
         } else {
-            Err(SerError::invalid_type(self.input, "nil"))
+            Err(SerError::invalid_type(self.input.as_view(), "nil"))
         }
     }
     fn deserialize_unit_struct<V>(
@@ -519,7 +528,7 @@ impl<'de, 'a> serde::Deserializer<'de> for &'a mut ValueDeserializer<'de> {
         let input = self
             .input
             .as_array()
-            .ok_or_else(|| SerError::invalid_type(self.input, "array"))?;
+            .ok_or_else(|| SerError::invalid_type(self.input.as_view(), "array"))?;
         visitor.visit_seq(ArrayDeserializer::new(input))
     }
     fn deserialize_tuple<V>(self, _len: usize, visitor: V) -> Result<V::Value, Self::Error>
@@ -547,7 +556,7 @@ impl<'de, 'a> serde::Deserializer<'de> for &'a mut ValueDeserializer<'de> {
         let input = self
             .input
             .as_object()
-            .ok_or_else(|| SerError::invalid_type(self.input, "object"))?;
+            .ok_or_else(|| SerError::invalid_type(self.input.as_view(), "object"))?;
         visitor.visit_map(ObjectDeserializer::new(input))
     }
     fn deserialize_struct<V>(
@@ -571,7 +580,7 @@ impl<'de, 'a> serde::Deserializer<'de> for &'a mut ValueDeserializer<'de> {
     where
         V: serde::de::Visitor<'de>,
     {
-        Err(SerError::invalid_type(self.input, "enum"))
+        Err(SerError::invalid_type(self.input.as_view(), "enum"))
     }
     fn deserialize_identifier<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where
@@ -588,8 +597,8 @@ impl<'de, 'a> serde::Deserializer<'de> for &'a mut ValueDeserializer<'de> {
 }
 
 struct ObjectDeserializer<'de> {
-    iter: Box<dyn Iterator<Item = (KStringCow<'de>, &'de (dyn ValueView + 'de))> + 'de>,
-    value: Option<&'de (dyn ValueView + 'de)>,
+    iter: Box<dyn Iterator<Item = (KStringCow<'de>, ValueCow<'de>)> + 'de>,
+    value: Option<ValueCow<'de>>,
 }
 
 impl<'de> ObjectDeserializer<'de> {
@@ -621,8 +630,8 @@ impl<'de> serde::de::MapAccess<'de> for ObjectDeserializer<'de> {
     where
         V: serde::de::DeserializeSeed<'de>,
     {
-        match self.value {
-            Some(v) => seed.deserialize(&mut ValueDeserializer::from_value(v)),
+        match self.value.clone() {
+            Some(v) => seed.deserialize(ValueDeserializer::from_value_cow(v)),
             None => {
                 panic!("no more values in next_value_seed, internal error in ValueDeserializer")
             }
@@ -631,7 +640,7 @@ impl<'de> serde::de::MapAccess<'de> for ObjectDeserializer<'de> {
 }
 
 struct ArrayDeserializer<'de> {
-    iter: Box<dyn Iterator<Item = &'de dyn ValueView> + 'de>,
+    iter: Box<dyn Iterator<Item = ValueCow<'de>> + 'de>,
 }
 
 impl<'de> ArrayDeserializer<'de> {
@@ -651,7 +660,7 @@ impl<'de> serde::de::SeqAccess<'de> for ArrayDeserializer<'de> {
     {
         match self.iter.next() {
             Some(v) => seed
-                .deserialize(&mut ValueDeserializer::from_value(v))
+                .deserialize(ValueDeserializer::from_value_cow(v))
                 .map(Some),
             None => Ok(None),
         }

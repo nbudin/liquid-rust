@@ -38,7 +38,7 @@ impl Variable {
             let v = expr.try_evaluate(runtime)?;
             let s = match v {
                 ValueCow::Owned(v) => v.into_scalar(),
-                ValueCow::Borrowed(v) => v.as_scalar(),
+                ValueCow::Rc(v) => v.to_value().into_scalar(),
             }?;
             path.push(s);
         }
@@ -56,7 +56,7 @@ impl Variable {
             } else {
                 let s = match v {
                     ValueCow::Owned(v) => v.into_scalar(),
-                    ValueCow::Borrowed(v) => v.as_scalar(),
+                    ValueCow::Rc(v) => v.to_value().into_scalar(),
                 }
                 .ok_or_else(|| {
                     let v = expr.evaluate(runtime).expect("lookup already verified");
@@ -101,6 +101,7 @@ mod test {
 
     use crate::model::Object;
     use crate::model::ValueViewCmp;
+    use crate::Value;
 
     use super::super::RuntimeBuilder;
     use super::super::StackFrame;
@@ -121,7 +122,10 @@ test_a: ["test"]
         let runtime = StackFrame::new(&runtime, &globals);
         let actual = var.evaluate(&runtime).unwrap();
         let actual = runtime.get(&actual).unwrap();
-        assert_eq!(actual, ValueViewCmp::new(&"test"));
+        assert_eq!(
+            actual,
+            ValueViewCmp::new(ValueCow::Owned(Value::scalar("test")))
+        );
     }
 
     #[test]
@@ -140,7 +144,10 @@ test_a: ["test1", "test2"]
         let runtime = StackFrame::new(&runtime, &globals);
         let actual = var.evaluate(&runtime).unwrap();
         let actual = runtime.get(&actual).unwrap();
-        assert_eq!(actual, ValueViewCmp::new(&"test2"));
+        assert_eq!(
+            actual,
+            ValueViewCmp::new(ValueCow::Owned(Value::scalar("test2")))
+        );
     }
 
     #[test]
@@ -160,6 +167,9 @@ test_a:
         let runtime = StackFrame::new(&runtime, &globals);
         let actual = var.evaluate(&runtime).unwrap();
         let actual = runtime.get(&actual).unwrap();
-        assert_eq!(actual, ValueViewCmp::new(&5));
+        assert_eq!(
+            actual,
+            ValueViewCmp::new(ValueCow::Owned(Value::scalar(5i64)))
+        );
     }
 }

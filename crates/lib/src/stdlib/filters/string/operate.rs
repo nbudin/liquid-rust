@@ -1,6 +1,7 @@
 use liquid_core::Expression;
 use liquid_core::Result;
 use liquid_core::Runtime;
+use liquid_core::ValueCow;
 use liquid_core::{
     Display_filter, Filter, FilterParameters, FilterReflection, FromFilterParameters, ParseFilter,
 };
@@ -34,16 +35,20 @@ struct ReplaceFilter {
 }
 
 impl Filter for ReplaceFilter {
-    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate<'s>(
+        &'s self,
+        input: &'s dyn ValueView,
+        runtime: &'s dyn Runtime,
+    ) -> Result<ValueCow<'s>> {
         let args = self.args.evaluate(runtime)?;
 
         let input = input.to_kstr();
 
         let replace = args.replace.unwrap_or_else(|| "".into());
 
-        Ok(Value::scalar(
+        Ok(ValueCow::Owned(Value::scalar(
             input.replace(args.search.as_str(), replace.as_str()),
-        ))
+        )))
     }
 }
 
@@ -75,7 +80,11 @@ struct ReplaceFirstFilter {
 }
 
 impl Filter for ReplaceFirstFilter {
-    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate<'s>(
+        &'s self,
+        input: &'s dyn ValueView,
+        runtime: &'s dyn Runtime,
+    ) -> Result<ValueCow<'s>> {
         let args = self.args.evaluate(runtime)?;
 
         let input = input.to_kstr();
@@ -87,10 +96,10 @@ impl Filter for ReplaceFirstFilter {
             let tokens: Vec<&str> = input.splitn(2, search.as_str()).collect();
             if tokens.len() == 2 {
                 let result = [tokens[0], replace.as_str(), tokens[1]].join("");
-                return Ok(Value::scalar(result));
+                return Ok(ValueCow::Owned(Value::scalar(result)));
             }
         }
-        Ok(Value::scalar(input.into_owned()))
+        Ok(ValueCow::Owned(Value::scalar(input.into_owned())))
     }
 }
 
@@ -117,12 +126,16 @@ struct RemoveFilter {
 }
 
 impl Filter for RemoveFilter {
-    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate<'s>(
+        &'s self,
+        input: &'s dyn ValueView,
+        runtime: &'s dyn Runtime,
+    ) -> Result<ValueCow<'s>> {
         let args = self.args.evaluate(runtime)?;
 
         let input = input.to_kstr();
 
-        Ok(Value::scalar(input.replace(args.search.as_str(), "")))
+        Ok(Value::scalar(input.replace(args.search.as_str(), "")).into())
     }
 }
 
@@ -149,14 +162,16 @@ struct RemoveFirstFilter {
 }
 
 impl Filter for RemoveFirstFilter {
-    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate<'s>(
+        &'s self,
+        input: &'s dyn ValueView,
+        runtime: &'s dyn Runtime,
+    ) -> Result<ValueCow<'s>> {
         let args = self.args.evaluate(runtime)?;
 
         let input = input.to_kstr();
 
-        Ok(Value::scalar(
-            input.splitn(2, args.search.as_str()).collect::<String>(),
-        ))
+        Ok(Value::scalar(input.splitn(2, args.search.as_str()).collect::<String>()).into())
     }
 }
 
@@ -183,13 +198,17 @@ struct AppendFilter {
 }
 
 impl Filter for AppendFilter {
-    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate<'s>(
+        &'s self,
+        input: &'s dyn ValueView,
+        runtime: &'s dyn Runtime,
+    ) -> Result<ValueCow<'s>> {
         let args = self.args.evaluate(runtime)?;
 
         let mut input = input.to_kstr().into_string();
         input.push_str(args.string.as_str());
 
-        Ok(Value::scalar(input))
+        Ok(Value::scalar(input).into())
     }
 }
 
@@ -216,14 +235,18 @@ struct PrependFilter {
 }
 
 impl Filter for PrependFilter {
-    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate<'s>(
+        &'s self,
+        input: &'s dyn ValueView,
+        runtime: &'s dyn Runtime,
+    ) -> Result<ValueCow<'s>> {
         let args = self.args.evaluate(runtime)?;
 
         let input = input.to_kstr();
         let mut string = args.string.into_string();
         string.push_str(input.as_str());
 
-        Ok(Value::scalar(string))
+        Ok(Value::scalar(string).into())
     }
 }
 

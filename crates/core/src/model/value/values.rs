@@ -2,8 +2,10 @@
 
 use std::cmp::Ordering;
 use std::fmt;
+use std::rc::Rc;
 
 use crate::model::KStringCow;
+use crate::ValueCow;
 
 use super::DisplayCow;
 use super::State;
@@ -239,7 +241,7 @@ impl PartialEq<Value> for Value {
 
 impl<'v> PartialEq<ValueViewCmp<'v>> for Value {
     fn eq(&self, other: &ValueViewCmp<'v>) -> bool {
-        ValueViewCmp::new(self.as_view()) == *other
+        ValueViewCmp::new(ValueCow::Rc(Rc::new(self))) == *other
     }
 }
 

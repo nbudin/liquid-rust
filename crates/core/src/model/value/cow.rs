@@ -1,4 +1,5 @@
 use std::fmt;
+use std::rc::Rc;
 
 use crate::model::KStringCow;
 
@@ -16,7 +17,7 @@ pub enum ValueCow<'s> {
     /// A boxed `Value`
     Owned(Value),
     /// A borrowed `Value`
-    Borrowed(&'s dyn ValueView),
+    Rc(Rc<dyn ValueView + 's>),
 }
 
 impl<'s> ValueCow<'s> {
@@ -26,15 +27,23 @@ impl<'s> ValueCow<'s> {
     pub fn into_owned(self) -> Value {
         match self {
             ValueCow::Owned(x) => x,
-            ValueCow::Borrowed(x) => x.to_value(),
+            ValueCow::Rc(x) => x.to_value(),
         }
     }
 
     /// Performs the conversion.
-    pub fn as_view(&self) -> &dyn ValueView {
+    pub fn as_view(&'s self) -> &(dyn ValueView + 's) {
         match self {
             ValueCow::Owned(o) => o.as_view(),
-            ValueCow::Borrowed(b) => *b,
+            ValueCow::Rc(r) => r.as_ref(),
+        }
+    }
+
+    /// Performs the conversion.
+    pub fn as_rc(&'s self) -> Rc<dyn ValueView + 's> {
+        match self {
+            ValueCow::Owned(o) => Rc::new(o.as_view()),
+            ValueCow::Rc(r) => r.clone(),
         }
     }
 }
@@ -93,7 +102,7 @@ impl From<Value> for ValueCow<'static> {
 
 impl<'s> From<&'s Value> for ValueCow<'s> {
     fn from(other: &'s Value) -> Self {
-        ValueCow::Borrowed(other.as_view())
+        ValueCow::Rc(Rc::new(other.as_view()))
     }
 }
 
@@ -135,7 +144,7 @@ impl<'v> PartialEq<ValueCow<'v>> for ValueCow<'v> {
 
 impl<'v> PartialEq<ValueViewCmp<'v>> for ValueCow<'v> {
     fn eq(&self, other: &ValueViewCmp<'v>) -> bool {
-        ValueViewCmp::new(self.as_view()) == *other
+        ValueViewCmp::new(self.clone()) == *other
     }
 }
 

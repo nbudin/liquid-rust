@@ -24,22 +24,31 @@ impl FilterChain {
     /// Process `Value` expression within `runtime`'s stack.
     pub fn evaluate<'s>(&'s self, runtime: &'s dyn Runtime) -> Result<ValueCow<'s>> {
         // take either the provided value or the value from the provided variable
-        let mut entry = self.entry.evaluate(runtime)?;
-
-        // apply all specified filters
-        for filter in &self.filters {
-            entry = ValueCow::Owned(
-                filter
-                    .evaluate(entry.as_view(), runtime)
-                    .trace("Filter error")
-                    .context_key("filter")
-                    .value_with(|| format!("{}", filter).into())
-                    .context_key("input")
-                    .value_with(|| format!("{}", entry.source()).into())?,
-            );
-        }
+        let entry = self.entry.evaluate(runtime)?;
 
         Ok(entry)
+        // apply all specified filters
+        // let mut filter_steps: Vec<ValueCow<'s>> = Vec::with_capacity(self.filters.len());
+
+        // for (index, filter) in self.filters.iter().enumerate() {
+        //     let last_value: &'s ValueCow = if index > 0 {
+        //         &filter_steps[index - 1]
+        //     } else {
+        //         &entry
+        //     };
+
+        //     let filtered_value = filter
+        //         .evaluate(last_value.as_view(), runtime)
+        //         .trace("Filter error")
+        //         .context_key("filter")
+        //         .value_with(|| format!("{}", filter).into())
+        //         .context_key("input")
+        //         .value_with(|| format!("{}", last_value.source()).into())?;
+        //     filter_steps[index] = filtered_value;
+        // }
+
+        // let final_value = filter_steps[self.filters.len() - 1].clone();
+        // Ok(final_value)
     }
 }
 

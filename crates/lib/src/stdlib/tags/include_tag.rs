@@ -133,6 +133,7 @@ mod test {
     use liquid_core::runtime;
     use liquid_core::runtime::RuntimeBuilder;
     use liquid_core::Value;
+    use liquid_core::ValueCow;
     use liquid_core::{Display_filter, Filter, FilterReflection, ParseFilter};
 
     use crate::stdlib;
@@ -184,15 +185,15 @@ mod test {
     pub struct SizeFilter;
 
     impl Filter for SizeFilter {
-        fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
+        fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<ValueCow> {
             if let Some(x) = input.as_scalar() {
-                Ok(Value::scalar(x.to_kstr().len() as i64))
+                Ok(ValueCow::Owned(Value::scalar(x.to_kstr().len() as i64)))
             } else if let Some(x) = input.as_array() {
-                Ok(Value::scalar(x.size()))
+                Ok(ValueCow::Owned(Value::scalar(x.size())))
             } else if let Some(x) = input.as_object() {
-                Ok(Value::scalar(x.size()))
+                Ok(ValueCow::Owned(Value::scalar(x.size())))
             } else {
-                Ok(Value::scalar(0i64))
+                Ok(ValueCow::Owned(Value::scalar(0i64)))
             }
         }
     }

@@ -6,8 +6,10 @@ mod ser;
 use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::fmt;
+use std::rc::Rc;
 
 use crate::model::KStringCow;
+use crate::ValueCow;
 
 use crate::model::value::DisplayCow;
 use crate::model::State;
@@ -27,14 +29,14 @@ pub trait ObjectView: ValueView {
     /// Keys available for lookup.
     fn keys<'k>(&'k self) -> Box<dyn Iterator<Item = KStringCow<'k>> + 'k>;
     /// Keys available for lookup.
-    fn values<'k>(&'k self) -> Box<dyn Iterator<Item = &'k dyn ValueView> + 'k>;
+    fn values<'k>(&'k self) -> Box<dyn Iterator<Item = ValueCow<'k>> + 'k>;
     /// Returns an iterator .
-    fn iter<'k>(&'k self) -> Box<dyn Iterator<Item = (KStringCow<'k>, &'k dyn ValueView)> + 'k>;
+    fn iter<'k>(&'k self) -> Box<dyn Iterator<Item = (KStringCow<'k>, ValueCow<'k>)> + 'k>;
 
     /// Access a contained `BoxedValue`.
     fn contains_key(&self, index: &str) -> bool;
     /// Access a contained `Value`.
-    fn get<'s>(&'s self, index: &str) -> Option<&'s dyn ValueView>;
+    fn get<'s>(&'s self, index: &str) -> Option<ValueCow<'s>>;
 }
 
 impl ValueView for Object {
@@ -85,13 +87,14 @@ impl ObjectView for Object {
         Box::new(keys)
     }
 
-    fn values<'k>(&'k self) -> Box<dyn Iterator<Item = &'k dyn ValueView> + 'k> {
-        let i = Object::values(self).map(|v| v.as_view());
+    fn values<'k>(&'k self) -> Box<dyn Iterator<Item = ValueCow<'k>> + 'k> {
+        let i = Object::values(self).map(|v| ValueCow::Rc(Rc::new(v.as_view())));
         Box::new(i)
     }
 
-    fn iter<'k>(&'k self) -> Box<dyn Iterator<Item = (KStringCow<'k>, &'k dyn ValueView)> + 'k> {
-        let i = Object::iter(self).map(|(k, v)| (k.as_str().into(), v.as_view()));
+    fn iter<'k>(&'k self) -> Box<dyn Iterator<Item = (KStringCow<'k>, ValueCow<'k>)> + 'k> {
+        let i = Object::iter(self)
+            .map(|(k, v)| (k.as_str().into(), ValueCow::Rc(Rc::new(v.as_view()))));
         Box::new(i)
     }
 
@@ -99,8 +102,8 @@ impl ObjectView for Object {
         Object::contains_key(self, index)
     }
 
-    fn get<'s>(&'s self, index: &str) -> Option<&'s dyn ValueView> {
-        Object::get(self, index).map(|v| v.as_view())
+    fn get<'s>(&'s self, index: &str) -> Option<ValueCow<'s>> {
+        Object::get(self, index).map(|v| ValueCow::Rc(Rc::new(v)))
     }
 }
 
@@ -117,11 +120,11 @@ impl<'o, O: ObjectView + ?Sized> ObjectView for &'o O {
         <O as ObjectView>::keys(self)
     }
 
-    fn values<'k>(&'k self) -> Box<dyn Iterator<Item = &'k dyn ValueView> + 'k> {
+    fn values<'k>(&'k self) -> Box<dyn Iterator<Item = ValueCow<'k>> + 'k> {
         <O as ObjectView>::values(self)
     }
 
-    fn iter<'k>(&'k self) -> Box<dyn Iterator<Item = (KStringCow<'k>, &'k dyn ValueView)> + 'k> {
+    fn iter<'k>(&'k self) -> Box<dyn Iterator<Item = (KStringCow<'k>, ValueCow<'k>)> + 'k> {
         <O as ObjectView>::iter(self)
     }
 
@@ -129,7 +132,7 @@ impl<'o, O: ObjectView + ?Sized> ObjectView for &'o O {
         <O as ObjectView>::contains_key(self, index)
     }
 
-    fn get<'s>(&'s self, index: &str) -> Option<&'s dyn ValueView> {
+    fn get<'s>(&'s self, index: &str) -> Option<ValueCow<'s>> {
         <O as ObjectView>::get(self, index)
     }
 }
@@ -218,13 +221,13 @@ impl<K: ObjectIndex, V: ValueView, S: ::std::hash::BuildHasher> ObjectView for H
         Box::new(keys)
     }
 
-    fn values<'k>(&'k self) -> Box<dyn Iterator<Item = &'k dyn ValueView> + 'k> {
-        let i = HashMap::values(self).map(as_view);
+    fn values<'k>(&'k self) -> Box<dyn Iterator<Item = ValueCow<'k>> + 'k> {
+        let i = HashMap::values(self).map(|v| ValueCow::Rc(Rc::new(v)));
         Box::new(i)
     }
 
-    fn iter<'k>(&'k self) -> Box<dyn Iterator<Item = (KStringCow<'k>, &'k dyn ValueView)> + 'k> {
-        let i = HashMap::iter(self).map(|(k, v)| (k.as_index().into(), as_view(v)));
+    fn iter<'k>(&'k self) -> Box<dyn Iterator<Item = (KStringCow<'k>, ValueCow<'k>)> + 'k> {
+        let i = HashMap::iter(self).map(|(k, v)| (k.as_index().into(), ValueCow::Rc(Rc::new(v))));
         Box::new(i)
     }
 
@@ -232,8 +235,8 @@ impl<K: ObjectIndex, V: ValueView, S: ::std::hash::BuildHasher> ObjectView for H
         HashMap::contains_key(self, index)
     }
 
-    fn get<'s>(&'s self, index: &str) -> Option<&'s dyn ValueView> {
-        HashMap::get(self, index).map(as_view)
+    fn get<'s>(&'s self, index: &str) -> Option<ValueCow<'s>> {
+        HashMap::get(self, index).map(|v| ValueCow::Rc(Rc::new(v)))
     }
 }
 
@@ -289,13 +292,13 @@ impl<K: ObjectIndex, V: ValueView> ObjectView for BTreeMap<K, V> {
         Box::new(keys)
     }
 
-    fn values<'k>(&'k self) -> Box<dyn Iterator<Item = &'k dyn ValueView> + 'k> {
-        let i = BTreeMap::values(self).map(as_view);
+    fn values<'k>(&'k self) -> Box<dyn Iterator<Item = ValueCow<'k>> + 'k> {
+        let i = BTreeMap::values(self).map(|v| ValueCow::Rc(Rc::new(v)));
         Box::new(i)
     }
 
-    fn iter<'k>(&'k self) -> Box<dyn Iterator<Item = (KStringCow<'k>, &'k dyn ValueView)> + 'k> {
-        let i = BTreeMap::iter(self).map(|(k, v)| (k.as_index().into(), as_view(v)));
+    fn iter<'k>(&'k self) -> Box<dyn Iterator<Item = (KStringCow<'k>, ValueCow<'k>)> + 'k> {
+        let i = BTreeMap::iter(self).map(|(k, v)| (k.as_index().into(), ValueCow::Rc(Rc::new(v))));
         Box::new(i)
     }
 
@@ -303,8 +306,8 @@ impl<K: ObjectIndex, V: ValueView> ObjectView for BTreeMap<K, V> {
         BTreeMap::contains_key(self, index)
     }
 
-    fn get<'s>(&'s self, index: &str) -> Option<&'s dyn ValueView> {
-        BTreeMap::get(self, index).map(as_view)
+    fn get<'s>(&'s self, index: &str) -> Option<ValueCow<'s>> {
+        BTreeMap::get(self, index).map(|v| ValueCow::Rc(Rc::new(v)))
     }
 }
 

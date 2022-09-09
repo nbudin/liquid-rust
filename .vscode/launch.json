@@ -1,0 +1,425 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug executable 'liquid-bin'",
+      "cargo": {
+        "args": [
+          "build",
+          "--bin=liquid-bin",
+          "--package=liquid-bin"
+        ],
+        "filter": {
+          "name": "liquid-bin",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in executable 'liquid-bin'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--bin=liquid-bin",
+          "--package=liquid-bin"
+        ],
+        "filter": {
+          "name": "liquid-bin",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in library 'liquid'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--lib",
+          "--package=liquid"
+        ],
+        "filter": {
+          "name": "liquid",
+          "kind": "lib"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug integration test 'derive_object'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--test=derive_object",
+          "--package=liquid"
+        ],
+        "filter": {
+          "name": "derive_object",
+          "kind": "test"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug integration test 'test_helper'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--test=test_helper",
+          "--package=liquid"
+        ],
+        "filter": {
+          "name": "test_helper",
+          "kind": "test"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug integration test 'multithreading'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--test=multithreading",
+          "--package=liquid"
+        ],
+        "filter": {
+          "name": "multithreading",
+          "kind": "test"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug integration test 'fixtures'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--test=fixtures",
+          "--package=liquid"
+        ],
+        "filter": {
+          "name": "fixtures",
+          "kind": "test"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug integration test 'filters'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--test=filters",
+          "--package=liquid"
+        ],
+        "filter": {
+          "name": "filters",
+          "kind": "test"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug integration test 'derive_macros'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--test=derive_macros",
+          "--package=liquid"
+        ],
+        "filter": {
+          "name": "derive_macros",
+          "kind": "test"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug integration test 'syntax'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--test=syntax",
+          "--package=liquid"
+        ],
+        "filter": {
+          "name": "syntax",
+          "kind": "test"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug integration test 'conformance'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--test=conformance",
+          "--package=liquid"
+        ],
+        "filter": {
+          "name": "conformance",
+          "kind": "test"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug integration test 'parse_file'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--test=parse_file",
+          "--package=liquid"
+        ],
+        "filter": {
+          "name": "parse_file",
+          "kind": "test"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug benchmark 'liquid'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--bench=liquid",
+          "--package=liquid"
+        ],
+        "filter": {
+          "name": "liquid",
+          "kind": "bench"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug benchmark 'handlebars'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--bench=handlebars",
+          "--package=liquid"
+        ],
+        "filter": {
+          "name": "handlebars",
+          "kind": "bench"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug benchmark 'tera_bigcontext'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--bench=tera_bigcontext",
+          "--package=liquid"
+        ],
+        "filter": {
+          "name": "tera_bigcontext",
+          "kind": "bench"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug benchmark 'tera_template'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--bench=tera_template",
+          "--package=liquid"
+        ],
+        "filter": {
+          "name": "tera_template",
+          "kind": "bench"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug benchmark 'tera_tera'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--bench=tera_tera",
+          "--package=liquid"
+        ],
+        "filter": {
+          "name": "tera_tera",
+          "kind": "bench"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in library 'liquid-core'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--lib",
+          "--package=liquid-core"
+        ],
+        "filter": {
+          "name": "liquid-core",
+          "kind": "lib"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in library 'liquid-lib'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--lib",
+          "--package=liquid-lib"
+        ],
+        "filter": {
+          "name": "liquid-lib",
+          "kind": "lib"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug integration test 'test_helper'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--test=test_helper",
+          "--package=liquid-lib"
+        ],
+        "filter": {
+          "name": "test_helper",
+          "kind": "test"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug integration test 'conformance'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--test=conformance",
+          "--package=liquid-lib"
+        ],
+        "filter": {
+          "name": "conformance",
+          "kind": "test"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in library 'liquid-help-md'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--lib",
+          "--package=liquid-help-md"
+        ],
+        "filter": {
+          "name": "liquid-help-md",
+          "kind": "lib"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}

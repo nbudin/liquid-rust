@@ -176,14 +176,14 @@ impl ObjectView for NullObject {
         Box::new(keys)
     }
 
-    fn values<'k>(&'k self) -> Box<dyn Iterator<Item = &'k dyn ValueView> + 'k> {
+    fn values<'k>(&'k self) -> Box<dyn Iterator<Item = ValueCow<'k>> + 'k> {
         let i = Vec::new().into_iter();
         Box::new(i)
     }
 
     fn iter<'k>(
         &'k self,
-    ) -> Box<dyn Iterator<Item = (crate::model::KStringCow<'k>, &'k dyn ValueView)> + 'k> {
+    ) -> Box<dyn Iterator<Item = (crate::model::KStringCow<'k>, ValueCow<'k>)> + 'k> {
         let i = Vec::new().into_iter();
         Box::new(i)
     }
@@ -192,7 +192,7 @@ impl ObjectView for NullObject {
         false
     }
 
-    fn get<'s>(&'s self, _index: &str) -> Option<&'s dyn ValueView> {
+    fn get<'s>(&'s self, _index: &str) -> Option<ValueCow<'s>> {
         None
     }
 }
@@ -375,18 +375,27 @@ mod test {
 
         let rt = RuntimeBuilder::new().build();
         rt.set_global("test".into(), Value::scalar(42f64));
-        assert_eq!(&rt.get(&test_path).unwrap(), &ValueViewCmp::new(&42f64));
+        assert_eq!(
+            &rt.get(&test_path).unwrap(),
+            &ValueViewCmp::new(ValueCow::Owned(Value::scalar(42f64)))
+        );
 
         {
             let data = crate::object!({"test": 3});
             let new_scope = super::super::StackFrame::new(&rt, &data);
 
             // assert that values are chained to the parent scope
-            assert_eq!(&new_scope.get(&test_path).unwrap(), &ValueViewCmp::new(&3));
+            assert_eq!(
+                &new_scope.get(&test_path).unwrap(),
+                &ValueViewCmp::new(ValueCow::Owned(Value::scalar(3i64)))
+            );
         }
 
         // assert that the value has reverted to the old one
-        assert_eq!(&rt.get(&test_path).unwrap(), &ValueViewCmp::new(&42));
+        assert_eq!(
+            &rt.get(&test_path).unwrap(),
+            &ValueViewCmp::new(ValueCow::Owned(Value::scalar(42i64)))
+        );
     }
 
     #[test]
@@ -404,7 +413,7 @@ mod test {
         }
         assert_eq!(
             &rt.get(&global_path).unwrap(),
-            &ValueViewCmp::new(&"some value")
+            &ValueViewCmp::new(ValueCow::Owned(Value::scalar("some value")))
         );
     }
 }
