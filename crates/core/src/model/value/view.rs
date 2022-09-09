@@ -341,7 +341,7 @@ mod test {
 
     #[test]
     fn test_debug() {
-        let scalar = 5;
+        let scalar = 5i64;
         println!("{:?}", scalar);
         let view: &dyn ValueView = &scalar;
         println!("{:?}", view);
