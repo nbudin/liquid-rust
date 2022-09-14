@@ -1,7 +1,8 @@
 use liquid_core::Result;
 use liquid_core::Runtime;
+use liquid_core::Value;
+use liquid_core::ValueCow;
 use liquid_core::{Display_filter, Filter, FilterReflection, ParseFilter};
-use liquid_core::{Value, ValueView};
 
 #[derive(Clone, ParseFilter, FilterReflection)]
 #[filter(
@@ -16,9 +17,9 @@ pub struct TestParameterlessFilterParser;
 pub struct TestParameterlessFilter;
 
 impl Filter for TestParameterlessFilter {
-    fn evaluate(&self, _input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate(&self, _input: ValueCow, _runtime: &dyn Runtime) -> Result<ValueCow> {
         let result = "<>";
 
-        Ok(Value::scalar(result))
+        Ok(Value::scalar(result).into())
     }
 }

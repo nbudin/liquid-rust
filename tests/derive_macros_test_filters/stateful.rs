@@ -2,6 +2,7 @@ use liquid_core::parser::FilterArguments;
 use liquid_core::Expression;
 use liquid_core::Result;
 use liquid_core::Runtime;
+use liquid_core::ValueCow;
 use liquid_core::{Display_filter, Filter, FilterParameters, FilterReflection, ParseFilter};
 use liquid_core::{Value, ValueView};
 
@@ -66,7 +67,7 @@ pub struct TestStatefulFilter {
 }
 
 impl Filter for TestStatefulFilter {
-    fn evaluate(&self, _input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate(&self, _input: ValueCow, runtime: &dyn Runtime) -> Result<ValueCow> {
         let args = self.args.evaluate(runtime)?;
 
         let result = match self.state {
@@ -75,6 +76,6 @@ impl Filter for TestStatefulFilter {
             Mood::Neutral => format!(":-| {} :-|", args.arg),
         };
 
-        Ok(Value::scalar(result))
+        Ok(Value::scalar(result).into())
     }
 }

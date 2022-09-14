@@ -13,7 +13,7 @@ use super::ValueView;
 /// Path to a value in an `Object`.
 ///
 /// There is guaranteed always at least one element.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Path<'s>(Vec<ScalarCow<'s>>);
 
 impl<'s> Path<'s> {
@@ -160,11 +160,11 @@ fn try_find_owned<'o, 'i>(
 fn augmented_get<'o>(value: &'o dyn ValueView, index: &ScalarCow<'_>) -> Option<ValueCow<'o>> {
     if let Some(arr) = value.as_array() {
         if let Some(index) = index.to_integer_strict() {
-            arr.get(index).map(ValueCow::Borrowed)
+            arr.get(index)
         } else {
             match &*index.to_kstr() {
-                "first" => arr.first().map(ValueCow::Borrowed),
-                "last" => arr.last().map(ValueCow::Borrowed),
+                "first" => arr.first(),
+                "last" => arr.last(),
                 "size" => Some(ValueCow::Owned(Value::scalar(arr.size()))),
                 _ => None,
             }

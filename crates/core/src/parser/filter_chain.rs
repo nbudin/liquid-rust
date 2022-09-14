@@ -1,6 +1,8 @@
 use std::fmt;
 use std::io::Write;
 
+use kstring::KString;
+
 use super::Filter;
 use crate::error::{Result, ResultLiquidExt, ResultLiquidReplaceExt};
 use crate::model::{ValueCow, ValueView};
@@ -24,22 +26,19 @@ impl FilterChain {
     /// Process `Value` expression within `runtime`'s stack.
     pub fn evaluate<'s>(&'s self, runtime: &'s dyn Runtime) -> Result<ValueCow<'s>> {
         // take either the provided value or the value from the provided variable
-        let mut entry = self.entry.evaluate(runtime)?;
+        let entry = self.entry.evaluate(runtime)?;
+        let source = format!("{}", entry.source());
 
         // apply all specified filters
-        for filter in &self.filters {
-            entry = ValueCow::Owned(
-                filter
-                    .evaluate(entry.as_view(), runtime)
-                    .trace("Filter error")
-                    .context_key("filter")
-                    .value_with(|| format!("{}", filter).into())
-                    .context_key("input")
-                    .value_with(|| format!("{}", entry.source()).into())?,
-            );
-        }
-
-        Ok(entry)
+        self.filters.iter().try_fold(entry, |acc, filter| {
+            filter
+                .evaluate(acc, runtime)
+                .trace("Filter error")
+                .context_key("filter")
+                .value_with(|| format!("{}", filter).into())
+                .context_key("input")
+                .value_with(|| KString::from(source.clone()))
+        })
     }
 }
 

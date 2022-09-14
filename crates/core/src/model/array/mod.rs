@@ -3,6 +3,7 @@
 use std::fmt;
 
 use crate::model::KStringCow;
+use crate::ValueCow;
 
 use crate::model::value::DisplayCow;
 use crate::model::State;
@@ -23,13 +24,13 @@ pub trait ArrayView: ValueView {
     /// Access a contained `Value`.
     fn contains_key(&self, index: i64) -> bool;
     /// Access a contained `Value`.
-    fn get(&self, index: i64) -> Option<&dyn ValueView>;
+    fn get(&self, index: i64) -> Option<ValueCow>;
     /// Returns the first element.
-    fn first(&self) -> Option<&dyn ValueView> {
+    fn first(&self) -> Option<ValueCow> {
         self.get(0)
     }
     /// Returns the last element.
-    fn last(&self) -> Option<&dyn ValueView> {
+    fn last(&self) -> Option<ValueCow> {
         self.get(-1)
     }
 }
@@ -91,10 +92,10 @@ impl<T: ValueView> ArrayView for Vec<T> {
         index < self.size()
     }
 
-    fn get(&self, index: i64) -> Option<&dyn ValueView> {
+    fn get(&self, index: i64) -> Option<ValueCow> {
         let index = convert_index(index, self.size());
         let value = self.as_slice().get(index as usize);
-        value.map(|v| convert_value(v))
+        value.map(|v| ValueCow::Borrowed(convert_value(v)))
     }
 }
 
@@ -115,7 +116,7 @@ impl<'a, A: ArrayView + ?Sized> ArrayView for &'a A {
         <A as ArrayView>::contains_key(self, index)
     }
 
-    fn get(&self, index: i64) -> Option<&dyn ValueView> {
+    fn get(&self, index: i64) -> Option<ValueCow> {
         <A as ArrayView>::get(self, index)
     }
 }

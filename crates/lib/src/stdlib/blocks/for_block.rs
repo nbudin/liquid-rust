@@ -965,8 +965,10 @@ mod test {
     pub struct ShoutFilter;
 
     impl Filter for ShoutFilter {
-        fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
-            Ok(Value::scalar(input.to_kstr().to_uppercase()))
+        fn evaluate(&self, input: ValueCow, _runtime: &dyn Runtime) -> Result<ValueCow> {
+            Ok(ValueCow::Owned(Value::scalar(
+                input.to_kstr().to_uppercase(),
+            )))
         }
     }
 

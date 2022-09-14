@@ -3,6 +3,7 @@ use std::convert::TryInto;
 use liquid_core::Expression;
 use liquid_core::Result;
 use liquid_core::Runtime;
+use liquid_core::ValueCow;
 use liquid_core::{
     Display_filter, Filter, FilterParameters, FilterReflection, FromFilterParameters, ParseFilter,
 };
@@ -23,14 +24,14 @@ pub struct Abs;
 struct AbsFilter;
 
 impl Filter for AbsFilter {
-    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate(&self, input: ValueCow, _runtime: &dyn Runtime) -> Result<ValueCow> {
         let input = input
             .as_scalar()
             .ok_or_else(|| invalid_input("Number expected"))?;
         input
             .to_integer_strict()
-            .map(|i| Value::scalar(i.abs()))
-            .or_else(|| input.to_float().map(|i| Value::scalar(i.abs())))
+            .map(|i| Value::scalar(i.abs()).into())
+            .or_else(|| input.to_float().map(|i| Value::scalar(i.abs()).into()))
             .ok_or_else(|| invalid_input("Number expected"))
     }
 }
@@ -58,7 +59,7 @@ struct AtLeastFilter {
 }
 
 impl Filter for AtLeastFilter {
-    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate(&self, input: ValueCow, runtime: &dyn Runtime) -> Result<ValueCow> {
         let args = self.args.evaluate(runtime)?;
 
         let input = input
@@ -72,11 +73,14 @@ impl Filter for AtLeastFilter {
 
         let result = input
             .to_integer_strict()
-            .and_then(|i| min.to_integer_strict().map(|min| Value::scalar(i.max(min))))
+            .and_then(|i| {
+                min.to_integer_strict()
+                    .map(|min| Value::scalar(i.max(min)).into())
+            })
             .or_else(|| {
                 input
                     .to_float()
-                    .and_then(|i| min.to_float().map(|min| Value::scalar(i.max(min))))
+                    .and_then(|i| min.to_float().map(|min| Value::scalar(i.max(min)).into()))
             })
             .ok_or_else(|| invalid_argument("operand", "Number expected"))?;
 
@@ -107,7 +111,7 @@ struct AtMostFilter {
 }
 
 impl Filter for AtMostFilter {
-    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate(&self, input: ValueCow, runtime: &dyn Runtime) -> Result<ValueCow> {
         let args = self.args.evaluate(runtime)?;
 
         let input = input
@@ -121,11 +125,14 @@ impl Filter for AtMostFilter {
 
         let result = input
             .to_integer_strict()
-            .and_then(|i| max.to_integer_strict().map(|max| Value::scalar(i.min(max))))
+            .and_then(|i| {
+                max.to_integer_strict()
+                    .map(|max| Value::scalar(i.min(max)).into())
+            })
             .or_else(|| {
                 input
                     .to_float()
-                    .and_then(|i| max.to_float().map(|max| Value::scalar(i.min(max))))
+                    .and_then(|i| max.to_float().map(|max| Value::scalar(i.min(max)).into()))
             })
             .ok_or_else(|| invalid_argument("operand", "Number expected"))?;
 
@@ -156,7 +163,7 @@ struct PlusFilter {
 }
 
 impl Filter for PlusFilter {
-    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate(&self, input: ValueCow, runtime: &dyn Runtime) -> Result<ValueCow> {
         let args = self.args.evaluate(runtime)?;
 
         let input = input
@@ -170,11 +177,15 @@ impl Filter for PlusFilter {
 
         let result = input
             .to_integer_strict()
-            .and_then(|i| operand.to_integer_strict().map(|o| Value::scalar(i + o)))
+            .and_then(|i| {
+                operand
+                    .to_integer_strict()
+                    .map(|o| Value::scalar(i + o).into())
+            })
             .or_else(|| {
                 input
                     .to_float()
-                    .and_then(|i| operand.to_float().map(|o| Value::scalar(i + o)))
+                    .and_then(|i| operand.to_float().map(|o| Value::scalar(i + o).into()))
             })
             .ok_or_else(|| invalid_argument("operand", "Number expected"))?;
 
@@ -205,7 +216,7 @@ struct MinusFilter {
 }
 
 impl Filter for MinusFilter {
-    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate(&self, input: ValueCow, runtime: &dyn Runtime) -> Result<ValueCow> {
         let args = self.args.evaluate(runtime)?;
 
         let input = input
@@ -219,11 +230,15 @@ impl Filter for MinusFilter {
 
         let result = input
             .to_integer_strict()
-            .and_then(|i| operand.to_integer_strict().map(|o| Value::scalar(i - o)))
+            .and_then(|i| {
+                operand
+                    .to_integer_strict()
+                    .map(|o| Value::scalar(i - o).into())
+            })
             .or_else(|| {
                 input
                     .to_float()
-                    .and_then(|i| operand.to_float().map(|o| Value::scalar(i - o)))
+                    .and_then(|i| operand.to_float().map(|o| Value::scalar(i - o).into()))
             })
             .ok_or_else(|| invalid_argument("operand", "Number expected"))?;
 
@@ -254,7 +269,7 @@ struct TimesFilter {
 }
 
 impl Filter for TimesFilter {
-    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate(&self, input: ValueCow, runtime: &dyn Runtime) -> Result<ValueCow> {
         let args = self.args.evaluate(runtime)?;
 
         let input = input
@@ -268,11 +283,15 @@ impl Filter for TimesFilter {
 
         let result = input
             .to_integer_strict()
-            .and_then(|i| operand.to_integer_strict().map(|o| Value::scalar(i * o)))
+            .and_then(|i| {
+                operand
+                    .to_integer_strict()
+                    .map(|o| Value::scalar(i * o).into())
+            })
             .or_else(|| {
                 input
                     .to_float()
-                    .and_then(|i| operand.to_float().map(|o| Value::scalar(i * o)))
+                    .and_then(|i| operand.to_float().map(|o| Value::scalar(i * o).into()))
             })
             .ok_or_else(|| invalid_argument("operand", "Number expected"))?;
 
@@ -303,7 +322,7 @@ struct DividedByFilter {
 }
 
 impl Filter for DividedByFilter {
-    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate(&self, input: ValueCow, runtime: &dyn Runtime) -> Result<ValueCow> {
         let args = self.args.evaluate(runtime)?;
 
         let input = input
@@ -327,11 +346,15 @@ impl Filter for DividedByFilter {
 
         let result = input
             .to_integer_strict()
-            .and_then(|i| operand.to_integer_strict().map(|o| Value::scalar(i / o)))
+            .and_then(|i| {
+                operand
+                    .to_integer_strict()
+                    .map(|o| Value::scalar(i / o).into())
+            })
             .or_else(|| {
                 input
                     .to_float()
-                    .and_then(|i| operand.to_float().map(|o| Value::scalar(i / o)))
+                    .and_then(|i| operand.to_float().map(|o| Value::scalar(i / o).into()))
             })
             .ok_or_else(|| invalid_argument("operand", "Number expected"))?;
 
@@ -362,7 +385,7 @@ struct ModuloFilter {
 }
 
 impl Filter for ModuloFilter {
-    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate(&self, input: ValueCow, runtime: &dyn Runtime) -> Result<ValueCow> {
         let args = self.args.evaluate(runtime)?;
 
         let input = input
@@ -386,11 +409,15 @@ impl Filter for ModuloFilter {
 
         let result = input
             .to_integer_strict()
-            .and_then(|i| operand.to_integer_strict().map(|o| Value::scalar(i % o)))
+            .and_then(|i| {
+                operand
+                    .to_integer_strict()
+                    .map(|o| Value::scalar(i % o).into())
+            })
             .or_else(|| {
                 input
                     .to_float()
-                    .and_then(|i| operand.to_float().map(|o| Value::scalar(i % o)))
+                    .and_then(|i| operand.to_float().map(|o| Value::scalar(i % o).into()))
             })
             .ok_or_else(|| invalid_argument("operand", "Number expected"))?;
 
@@ -424,7 +451,7 @@ struct RoundFilter {
 }
 
 impl Filter for RoundFilter {
-    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate(&self, input: ValueCow, runtime: &dyn Runtime) -> Result<ValueCow> {
         let args = self.args.evaluate(runtime)?;
 
         let n = args.decimal_places.unwrap_or(0);
@@ -435,14 +462,14 @@ impl Filter for RoundFilter {
             .ok_or_else(|| invalid_input("Number expected"))?;
 
         match n.cmp(&0) {
-            std::cmp::Ordering::Equal => Ok(Value::scalar(input.round() as i64)),
-            std::cmp::Ordering::Less => Ok(Value::scalar(input.round() as i64)),
+            std::cmp::Ordering::Equal => Ok(Value::scalar(input.round() as i64).into()),
+            std::cmp::Ordering::Less => Ok(Value::scalar(input.round() as i64).into()),
             _ => {
                 let multiplier = 10.0_f64.powi(
                     n.try_into()
                         .map_err(|_| invalid_input("decimal-places was too large"))?,
                 );
-                Ok(Value::scalar((input * multiplier).round() / multiplier))
+                Ok(Value::scalar((input * multiplier).round() / multiplier).into())
             }
         }
     }
@@ -461,12 +488,12 @@ pub struct Ceil;
 struct CeilFilter;
 
 impl Filter for CeilFilter {
-    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate(&self, input: ValueCow, _runtime: &dyn Runtime) -> Result<ValueCow> {
         let n = input
             .as_scalar()
             .and_then(|s| s.to_float())
             .ok_or_else(|| invalid_input("Number expected"))?;
-        Ok(Value::scalar(n.ceil() as i64))
+        Ok(Value::scalar(n.ceil() as i64).into())
     }
 }
 
@@ -483,12 +510,12 @@ pub struct Floor;
 struct FloorFilter;
 
 impl Filter for FloorFilter {
-    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate(&self, input: ValueCow, _runtime: &dyn Runtime) -> Result<ValueCow> {
         let n = input
             .as_scalar()
             .and_then(|s| s.to_float())
             .ok_or_else(|| invalid_input("Number expected"))?;
-        Ok(Value::scalar(n.floor() as i64))
+        Ok(Value::scalar(n.floor() as i64).into())
     }
 }
 

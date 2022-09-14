@@ -3,6 +3,7 @@ use std::cmp;
 use liquid_core::Expression;
 use liquid_core::Result;
 use liquid_core::Runtime;
+use liquid_core::ValueCow;
 use liquid_core::{
     Display_filter, Filter, FilterParameters, FilterReflection, FromFilterParameters, ParseFilter,
 };
@@ -62,7 +63,7 @@ struct SliceFilter {
 }
 
 impl Filter for SliceFilter {
-    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate(&self, input: ValueCow, runtime: &dyn Runtime) -> Result<ValueCow> {
         let args = self.args.evaluate(runtime)?;
 
         let offset = args.offset as isize;
@@ -80,13 +81,12 @@ impl Filter for SliceFilter {
                     .skip(offset)
                     .take(length)
                     .map(|s| s.to_value()),
-            ))
+            )
+            .into())
         } else {
             let input = input.to_kstr();
             let (offset, length) = canonicalize_slice(offset, length, input.len());
-            Ok(Value::scalar(
-                input.chars().skip(offset).take(length).collect::<String>(),
-            ))
+            Ok(Value::scalar(input.chars().skip(offset).take(length).collect::<String>()).into())
         }
     }
 }

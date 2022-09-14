@@ -1,5 +1,6 @@
 use liquid_core::Result;
 use liquid_core::Runtime;
+use liquid_core::ValueCow;
 use liquid_core::{Display_filter, Filter, FilterReflection, ParseFilter};
 use liquid_core::{Value, ValueView};
 use regex::Regex;
@@ -75,8 +76,8 @@ pub struct Escape;
 struct EscapeFilter;
 
 impl Filter for EscapeFilter {
-    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
-        escape(input, false)
+    fn evaluate(&self, input: ValueCow, _runtime: &dyn Runtime) -> Result<ValueCow> {
+        escape(input.as_view(), false).map(ValueCow::Owned)
     }
 }
 
@@ -93,8 +94,8 @@ pub struct EscapeOnce;
 struct EscapeOnceFilter;
 
 impl Filter for EscapeOnceFilter {
-    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
-        escape(input, true)
+    fn evaluate(&self, input: ValueCow, _runtime: &dyn Runtime) -> Result<ValueCow> {
+        escape(input.as_view(), true).map(ValueCow::Owned)
     }
 }
 
@@ -120,13 +121,13 @@ static MATCHERS: once_cell::sync::Lazy<[Regex; 4]> = once_cell::sync::Lazy::new(
 });
 
 impl Filter for StripHtmlFilter {
-    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate(&self, input: ValueCow, _runtime: &dyn Runtime) -> Result<ValueCow> {
         let input = input.to_kstr().into_string();
 
         let result = MATCHERS.iter().fold(input, |acc, matcher| {
             matcher.replace_all(&acc, "").into_owned()
         });
-        Ok(Value::scalar(result))
+        Ok(Value::scalar(result).into())
     }
 }
 
@@ -143,10 +144,10 @@ pub struct NewlineToBr;
 struct NewlineToBrFilter;
 
 impl Filter for NewlineToBrFilter {
-    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate(&self, input: ValueCow, _runtime: &dyn Runtime) -> Result<ValueCow> {
         // TODO handle windows line endings
         let input = input.to_kstr();
-        Ok(Value::scalar(input.replace('\n', "<br />\n")))
+        Ok(Value::scalar(input.replace('\n', "<br />\n")).into())
     }
 }
 

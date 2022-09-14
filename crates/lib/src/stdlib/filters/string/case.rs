@@ -2,6 +2,7 @@
 
 use liquid_core::Result;
 use liquid_core::Runtime;
+use liquid_core::ValueCow;
 use liquid_core::{Display_filter, Filter, FilterReflection, ParseFilter};
 use liquid_core::{Value, ValueView};
 
@@ -18,9 +19,9 @@ pub struct Downcase;
 struct DowncaseFilter;
 
 impl Filter for DowncaseFilter {
-    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate(&self, input: ValueCow, _runtime: &dyn Runtime) -> Result<ValueCow> {
         let s = input.to_kstr();
-        Ok(Value::scalar(s.to_lowercase()))
+        Ok(Value::scalar(s.to_lowercase()).into())
     }
 }
 
@@ -37,9 +38,9 @@ pub struct Upcase;
 struct UpcaseFilter;
 
 impl Filter for UpcaseFilter {
-    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate(&self, input: ValueCow, _runtime: &dyn Runtime) -> Result<ValueCow> {
         let s = input.to_kstr();
-        Ok(Value::scalar(s.to_uppercase()))
+        Ok(Value::scalar(s.to_uppercase()).into())
     }
 }
 
@@ -56,7 +57,7 @@ pub struct Capitalize;
 struct CapitalizeFilter;
 
 impl Filter for CapitalizeFilter {
-    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate(&self, input: ValueCow, _runtime: &dyn Runtime) -> Result<ValueCow> {
         let s = input.to_kstr().to_owned();
         let mut chars = s.chars();
         let capitalized = match chars.next() {
@@ -64,7 +65,7 @@ impl Filter for CapitalizeFilter {
             None => String::new(),
         };
 
-        Ok(Value::scalar(capitalized))
+        Ok(Value::scalar(capitalized).into())
     }
 }
 
