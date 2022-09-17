@@ -176,14 +176,14 @@ impl ObjectView for NullObject {
         Box::new(keys)
     }
 
-    fn values<'k>(&'k self) -> Box<dyn Iterator<Item = &'k dyn ValueView> + 'k> {
+    fn values<'k>(&'k self) -> Box<dyn Iterator<Item = ValueCow<'k>> + 'k> {
         let i = Vec::new().into_iter();
         Box::new(i)
     }
 
     fn iter<'k>(
         &'k self,
-    ) -> Box<dyn Iterator<Item = (crate::model::KStringCow<'k>, &'k dyn ValueView)> + 'k> {
+    ) -> Box<dyn Iterator<Item = (crate::model::KStringCow<'k>, ValueCow<'k>)> + 'k> {
         let i = Vec::new().into_iter();
         Box::new(i)
     }
@@ -192,7 +192,7 @@ impl ObjectView for NullObject {
         false
     }
 
-    fn get<'s>(&'s self, _index: &str) -> Option<&'s dyn ValueView> {
+    fn get<'s>(&'s self, _index: &str) -> Option<ValueCow<'s>> {
         None
     }
 }

@@ -1,6 +1,7 @@
 //! Find a `ValueView` nested in an `ObjectView`
 
 use std::fmt;
+use std::rc::Rc;
 use std::slice;
 
 use crate::error::Result;
@@ -117,47 +118,23 @@ impl<'i, 's: 'i> ExactSizeIterator for PathIter<'i, 's> {
 
 /// Find a `ValueView` nested in an `ObjectView`
 pub fn try_find<'o>(value: &'o dyn ValueView, path: &[ScalarCow<'_>]) -> Option<ValueCow<'o>> {
-    let indexes = path.iter();
-    try_find_borrowed(value, indexes)
-}
-
-fn try_find_borrowed<'o, 'i>(
-    value: &'o dyn ValueView,
-    mut path: impl Iterator<Item = &'i ScalarCow<'i>>,
-) -> Option<ValueCow<'o>> {
-    let index = match path.next() {
-        Some(index) => index,
-        None => {
-            return Some(ValueCow::Borrowed(value));
-        }
-    };
-    let child = augmented_get(value, index)?;
-    match child {
-        ValueCow::Owned(child) => try_find_owned(child, path),
-        ValueCow::Borrowed(child) => try_find_borrowed(child, path),
+    let mut indexes = path.iter();
+    let mut current = ValueCow::Shared(Rc::new(value));
+    loop {
+        let index = match indexes.next() {
+            Some(index) => index,
+            None => {
+                return Some(current);
+            }
+        };
+        current = augmented_get(value, index)?;
     }
 }
 
-fn try_find_owned<'o, 'i>(
-    value: Value,
-    mut path: impl Iterator<Item = &'i ScalarCow<'i>>,
+fn augmented_get<'o>(
+    value: &'o (dyn ValueView + 'o),
+    index: &ScalarCow<'_>,
 ) -> Option<ValueCow<'o>> {
-    let index = match path.next() {
-        Some(index) => index,
-        None => {
-            return Some(ValueCow::Owned(value));
-        }
-    };
-    let child = augmented_get(&value, index)?;
-    match child {
-        ValueCow::Owned(child) => try_find_owned(child, path),
-        ValueCow::Borrowed(child) => {
-            try_find_borrowed(child, path).map(|v| ValueCow::Owned(v.into_owned()))
-        }
-    }
-}
-
-fn augmented_get<'o>(value: &'o dyn ValueView, index: &ScalarCow<'_>) -> Option<ValueCow<'o>> {
     if let Some(arr) = value.as_array() {
         if let Some(index) = index.to_integer_strict() {
             arr.get(index)
@@ -171,12 +148,10 @@ fn augmented_get<'o>(value: &'o dyn ValueView, index: &ScalarCow<'_>) -> Option<
         }
     } else if let Some(obj) = value.as_object() {
         let index = index.to_kstr();
-        obj.get(index.as_str())
-            .map(ValueCow::Borrowed)
-            .or_else(|| match index.as_str() {
-                "size" => Some(ValueCow::Owned(Value::scalar(obj.size()))),
-                _ => None,
-            })
+        obj.get(index.as_str()).or_else(|| match index.as_str() {
+            "size" => Some(ValueCow::Owned(Value::scalar(obj.size()))),
+            _ => None,
+        })
     } else if let Some(scalar) = value.as_scalar() {
         let index = index.to_kstr();
         match index.as_str() {

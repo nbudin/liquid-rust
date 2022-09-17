@@ -6,6 +6,7 @@ use crate::model::KStringCow;
 use super::DisplayCow;
 use super::State;
 use super::Value;
+use super::ValueCowCmp;
 use crate::model::ArrayView;
 use crate::model::ObjectView;
 use crate::model::ScalarCow;
@@ -268,16 +269,20 @@ pub(crate) fn value_eq(lhs: &dyn ValueView, rhs: &dyn ValueView) -> bool {
         if x.size() != y.size() {
             return false;
         }
-        return x.values().zip(y.values()).all(|(x, y)| value_eq(x, y));
+        return x
+            .values()
+            .zip(y.values())
+            .all(|(x, y)| value_eq(x.as_view(), y.as_view()));
     }
 
     if let (Some(x), Some(y)) = (lhs.as_object(), rhs.as_object()) {
         if x.size() != y.size() {
             return false;
         }
-        return x
-            .iter()
-            .all(|(key, value)| y.get(key.as_str()).map_or(false, |v| value_eq(v, value)));
+        return x.iter().all(|(key, value)| {
+            y.get(key.as_str())
+                .map_or(false, |v| value_eq(v.as_view(), value.as_view()))
+        });
     }
 
     if lhs.is_nil() && rhs.is_nil() {
@@ -321,15 +326,15 @@ pub(crate) fn value_cmp(lhs: &dyn ValueView, rhs: &dyn ValueView) -> Option<Orde
     if let (Some(x), Some(y)) = (lhs.as_array(), rhs.as_array()) {
         return x
             .values()
-            .map(|v| ValueViewCmp(v))
-            .partial_cmp(y.values().map(|v| ValueViewCmp(v)));
+            .map(|v| ValueCowCmp(v))
+            .partial_cmp(y.values().map(|v| ValueCowCmp(v)));
     }
 
     if let (Some(x), Some(y)) = (lhs.as_object(), rhs.as_object()) {
         return x
             .iter()
-            .map(|(k, v)| (k, ValueViewCmp(v)))
-            .partial_cmp(y.iter().map(|(k, v)| (k, ValueViewCmp(v))));
+            .map(|(k, v)| (k, ValueCowCmp(v)))
+            .partial_cmp(y.iter().map(|(k, v)| (k, ValueCowCmp(v))));
     }
 
     None

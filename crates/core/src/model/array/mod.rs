@@ -1,6 +1,7 @@
 //! Type representing a Liquid array, payload of the `Value::Array` variant
 
 use std::fmt;
+use std::rc::Rc;
 
 use crate::model::KStringCow;
 use crate::ValueCow;
@@ -19,18 +20,18 @@ pub trait ArrayView: ValueView {
     fn size(&self) -> i64;
 
     /// Returns an iterator .
-    fn values<'k>(&'k self) -> Box<dyn Iterator<Item = &'k dyn ValueView> + 'k>;
+    fn values<'k>(&'k self) -> Box<dyn Iterator<Item = ValueCow> + 'k>;
 
     /// Access a contained `Value`.
     fn contains_key(&self, index: i64) -> bool;
     /// Access a contained `Value`.
-    fn get(&self, index: i64) -> Option<ValueCow>;
+    fn get<'s>(&'s self, index: i64) -> Option<ValueCow<'s>>;
     /// Returns the first element.
-    fn first(&self) -> Option<ValueCow> {
+    fn first<'s>(&'s self) -> Option<ValueCow<'s>> {
         self.get(0)
     }
     /// Returns the last element.
-    fn last(&self) -> Option<ValueCow> {
+    fn last<'s>(&'s self) -> Option<ValueCow<'s>> {
         self.get(-1)
     }
 }
@@ -82,8 +83,11 @@ impl<T: ValueView> ArrayView for Vec<T> {
         self.len() as i64
     }
 
-    fn values<'k>(&'k self) -> Box<dyn Iterator<Item = &'k dyn ValueView> + 'k> {
-        let i = self.as_slice().iter().map(|v| convert_value(v));
+    fn values<'k>(&'k self) -> Box<dyn Iterator<Item = ValueCow> + 'k> {
+        let i = self
+            .as_slice()
+            .iter()
+            .map(|v| ValueCow::Shared(Rc::new(convert_value(v))));
         Box::new(i)
     }
 
@@ -95,7 +99,7 @@ impl<T: ValueView> ArrayView for Vec<T> {
     fn get(&self, index: i64) -> Option<ValueCow> {
         let index = convert_index(index, self.size());
         let value = self.as_slice().get(index as usize);
-        value.map(|v| ValueCow::Borrowed(convert_value(v)))
+        value.map(|v| ValueCow::Shared(Rc::new(convert_value(v))))
     }
 }
 
@@ -108,7 +112,7 @@ impl<'a, A: ArrayView + ?Sized> ArrayView for &'a A {
         <A as ArrayView>::size(self)
     }
 
-    fn values<'k>(&'k self) -> Box<dyn Iterator<Item = &'k dyn ValueView> + 'k> {
+    fn values<'k>(&'k self) -> Box<dyn Iterator<Item = ValueCow> + 'k> {
         <A as ArrayView>::values(self)
     }
 

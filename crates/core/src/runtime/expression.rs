@@ -1,4 +1,5 @@
 use std::fmt;
+use std::rc::Rc;
 
 use crate::error::Result;
 use crate::model::Scalar;
@@ -43,7 +44,7 @@ impl Expression {
     /// Convert to a `Value`.
     pub fn try_evaluate<'c>(&'c self, runtime: &'c dyn Runtime) -> Option<ValueCow<'c>> {
         match self {
-            Expression::Literal(ref x) => Some(ValueCow::Borrowed(x)),
+            Expression::Literal(ref x) => Some(ValueCow::Shared(Rc::new(x))),
             Expression::Variable(ref x) => {
                 let path = x.try_evaluate(runtime)?;
                 runtime.try_get(&path)
@@ -54,7 +55,7 @@ impl Expression {
     /// Convert to a `Value`.
     pub fn evaluate<'c>(&'c self, runtime: &'c dyn Runtime) -> Result<ValueCow<'c>> {
         let val = match self {
-            Expression::Literal(ref x) => ValueCow::Borrowed(x),
+            Expression::Literal(ref x) => ValueCow::Shared(Rc::new(x)),
             Expression::Variable(ref x) => {
                 let path = x.evaluate(runtime)?;
                 runtime.get(&path)?

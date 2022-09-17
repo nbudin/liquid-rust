@@ -1,7 +1,11 @@
+use std::cmp::Ordering;
 use std::fmt;
+use std::rc::Rc;
 
 use crate::model::KStringCow;
 
+use super::value_cmp;
+use super::value_eq;
 use super::DisplayCow;
 use super::State;
 use super::Value;
@@ -16,7 +20,9 @@ pub enum ValueCow<'s> {
     /// A boxed `Value`
     Owned(Value),
     /// A borrowed `Value`
-    Borrowed(&'s dyn ValueView),
+    // Borrowed(&'s dyn ValueView),
+    /// A `Value` with shared ownership
+    Shared(Rc<dyn ValueView + 's>),
 }
 
 impl<'s> ValueCow<'s> {
@@ -26,7 +32,8 @@ impl<'s> ValueCow<'s> {
     pub fn into_owned(self) -> Value {
         match self {
             ValueCow::Owned(x) => x,
-            ValueCow::Borrowed(x) => x.to_value(),
+            // ValueCow::Borrowed(x) => x.to_value(),
+            ValueCow::Shared(x) => x.to_value(),
         }
     }
 
@@ -34,7 +41,16 @@ impl<'s> ValueCow<'s> {
     pub fn as_view(&self) -> &dyn ValueView {
         match self {
             ValueCow::Owned(o) => o.as_view(),
-            ValueCow::Borrowed(b) => *b,
+            // ValueCow::Borrowed(b) => *b,
+            ValueCow::Shared(s) => s.as_ref(),
+        }
+    }
+
+    pub fn as_shared(&'s self) -> Rc<dyn ValueView + 's> {
+        match self {
+            ValueCow::Owned(o) => Rc::new(o),
+            // ValueCow::Borrowed(b) => Rc::new(b),
+            ValueCow::Shared(s) => s.clone(),
         }
     }
 }
@@ -64,15 +80,15 @@ impl<'s> ValueView for ValueCow<'s> {
         self.as_view().to_value()
     }
 
-    fn as_scalar(&self) -> Option<ScalarCow<'_>> {
+    fn as_scalar<'a>(&'a self) -> Option<ScalarCow<'a>> {
         self.as_view().as_scalar()
     }
 
-    fn as_array(&self) -> Option<&dyn ArrayView> {
+    fn as_array<'a>(&'a self) -> Option<&'a (dyn ArrayView + 'a)> {
         self.as_view().as_array()
     }
 
-    fn as_object(&self) -> Option<&dyn ObjectView> {
+    fn as_object<'a>(&'a self) -> Option<&'a (dyn ObjectView + 'a)> {
         self.as_view().as_object()
     }
 
@@ -93,7 +109,7 @@ impl From<Value> for ValueCow<'static> {
 
 impl<'s> From<&'s Value> for ValueCow<'s> {
     fn from(other: &'s Value) -> Self {
-        ValueCow::Borrowed(other.as_view())
+        ValueCow::Shared(Rc::new(other.as_view()))
     }
 }
 
@@ -209,5 +225,95 @@ impl<'v> PartialEq<crate::model::KStringRef<'v>> for ValueCow<'v> {
 impl<'v> PartialEq<crate::model::KStringCow<'v>> for ValueCow<'v> {
     fn eq(&self, other: &crate::model::KStringCow<'v>) -> bool {
         super::value_eq(self.as_view(), other)
+    }
+}
+
+/// `Value` comparison semantics for types implementing `ValueCow`.
+#[derive(Clone, Debug)]
+pub struct ValueCowCmp<'v>(pub ValueCow<'v>);
+
+impl<'v> ValueCowCmp<'v> {
+    /// `Value` comparison semantics for types implementing `ValueCow`.
+    pub fn new(v: ValueCow) -> ValueCowCmp<'_> {
+        ValueCowCmp(v)
+    }
+}
+
+impl<'v> PartialEq<ValueCowCmp<'v>> for ValueCowCmp<'v> {
+    fn eq(&self, other: &Self) -> bool {
+        value_eq(self.0.as_view(), other.0.as_view())
+    }
+}
+
+impl<'v> PartialEq<i64> for ValueCowCmp<'v> {
+    fn eq(&self, other: &i64) -> bool {
+        super::value_eq(self.0.as_view(), other)
+    }
+}
+
+impl<'v> PartialEq<f64> for ValueCowCmp<'v> {
+    fn eq(&self, other: &f64) -> bool {
+        super::value_eq(self.0.as_view(), other)
+    }
+}
+
+impl<'v> PartialEq<bool> for ValueCowCmp<'v> {
+    fn eq(&self, other: &bool) -> bool {
+        super::value_eq(self.0.as_view(), other)
+    }
+}
+
+impl<'v> PartialEq<crate::model::scalar::DateTime> for ValueCowCmp<'v> {
+    fn eq(&self, other: &crate::model::scalar::DateTime) -> bool {
+        super::value_eq(self.0.as_view(), other)
+    }
+}
+
+impl<'v> PartialEq<crate::model::scalar::Date> for ValueCowCmp<'v> {
+    fn eq(&self, other: &crate::model::scalar::Date) -> bool {
+        super::value_eq(self.0.as_view(), other)
+    }
+}
+
+impl<'v> PartialEq<str> for ValueCowCmp<'v> {
+    fn eq(&self, other: &str) -> bool {
+        let other = KStringCow::from_ref(other);
+        super::value_eq(self.0.as_view(), &other)
+    }
+}
+
+impl<'v> PartialEq<&'v str> for ValueCowCmp<'v> {
+    fn eq(&self, other: &&str) -> bool {
+        super::value_eq(self.0.as_view(), other)
+    }
+}
+
+impl<'v> PartialEq<String> for ValueCowCmp<'v> {
+    fn eq(&self, other: &String) -> bool {
+        self == other.as_str()
+    }
+}
+
+impl<'v> PartialEq<crate::model::KString> for ValueCowCmp<'v> {
+    fn eq(&self, other: &crate::model::KString) -> bool {
+        super::value_eq(self.0.as_view(), &other.as_ref())
+    }
+}
+
+impl<'v> PartialEq<crate::model::KStringRef<'v>> for ValueCowCmp<'v> {
+    fn eq(&self, other: &crate::model::KStringRef<'v>) -> bool {
+        super::value_eq(self.0.as_view(), other)
+    }
+}
+
+impl<'v> PartialEq<crate::model::KStringCow<'v>> for ValueCowCmp<'v> {
+    fn eq(&self, other: &crate::model::KStringCow<'v>) -> bool {
+        super::value_eq(self.0.as_view(), other)
+    }
+}
+
+impl<'v> PartialOrd<ValueCowCmp<'v>> for ValueCowCmp<'v> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        value_cmp(self.0.as_view(), other.0.as_view())
     }
 }

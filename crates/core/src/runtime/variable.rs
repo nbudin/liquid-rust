@@ -38,7 +38,7 @@ impl Variable {
             let v = expr.try_evaluate(runtime)?;
             let s = match v {
                 ValueCow::Owned(v) => v.into_scalar(),
-                ValueCow::Borrowed(v) => v.as_scalar(),
+                ValueCow::Shared(v) => v.as_scalar(),
             }?;
             path.push(s);
         }
@@ -56,7 +56,7 @@ impl Variable {
             } else {
                 let s = match v {
                     ValueCow::Owned(v) => v.into_scalar(),
-                    ValueCow::Borrowed(v) => v.as_scalar(),
+                    ValueCow::Shared(v) => v.as_scalar(),
                 }
                 .ok_or_else(|| {
                     let v = expr.evaluate(runtime).expect("lookup already verified");

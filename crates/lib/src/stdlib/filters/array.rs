@@ -115,7 +115,7 @@ struct SortFilter {
     args: PropertyArgs,
 }
 
-fn safe_property_getter<'a>(value: &'a Value, property: &str) -> &'a dyn ValueView {
+fn safe_property_getter<'a>(value: &'a Value, property: &str) -> ValueCow<'a> {
     value
         .as_object()
         .and_then(|obj| obj.get(property))
@@ -136,8 +136,8 @@ impl Filter for SortFilter {
             // Using unwrap is ok since all of the elements are objects
             sorted.sort_by(|a, b| {
                 nil_safe_compare(
-                    safe_property_getter(a, property),
-                    safe_property_getter(b, property),
+                    safe_property_getter(a, property).as_view(),
+                    safe_property_getter(b, property).as_view(),
                 )
                 .unwrap_or(cmp::Ordering::Equal)
             });
@@ -254,7 +254,7 @@ impl Filter for WhereFilter {
                 .filter_map(|v| v.as_object())
                 .filter(|object| {
                     object.get(property).map_or(false, |value| {
-                        let value = ValueViewCmp::new(value);
+                        let value = ValueViewCmp::new(value.as_view());
                         target_value == value
                     })
                 })
@@ -291,7 +291,7 @@ impl Filter for UniqFilter {
         for x in array.values() {
             if !deduped
                 .iter()
-                .any(|v| ValueViewCmp::new(v.as_view()) == ValueViewCmp::new(x))
+                .any(|v| ValueViewCmp::new(v.as_view()) == ValueViewCmp::new(x.as_view()))
             {
                 deduped.push(x.to_value())
             }
