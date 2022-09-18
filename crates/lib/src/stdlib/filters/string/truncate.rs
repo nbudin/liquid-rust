@@ -1,5 +1,6 @@
 use std::cmp;
 
+use liquid_core::model::SharedValueView;
 use liquid_core::Expression;
 use liquid_core::Result;
 use liquid_core::Runtime;
@@ -67,7 +68,11 @@ struct TruncateFilter {
 }
 
 impl Filter for TruncateFilter {
-    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate<'s>(
+        &'s self,
+        input: SharedValueView<'s>,
+        runtime: &dyn Runtime,
+    ) -> Result<SharedValueView<'s>> {
         let args = self.args.evaluate(runtime)?;
 
         let length = args.length.unwrap_or(50) as usize;
@@ -86,9 +91,9 @@ impl Filter for TruncateFilter {
                 .collect::<Vec<&str>>()
                 .join("")
                 + truncate_string.as_str();
-            Value::scalar(result)
+            Value::scalar(result).into()
         } else {
-            input.to_value()
+            input
         };
         Ok(result)
     }
@@ -126,7 +131,11 @@ struct TruncateWordsFilter {
 }
 
 impl Filter for TruncateWordsFilter {
-    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate<'s>(
+        &'s self,
+        input: SharedValueView<'s>,
+        runtime: &dyn Runtime,
+    ) -> Result<SharedValueView<'s>> {
         let args = self.args.evaluate(runtime)?;
 
         let words = args.length.unwrap_or(50) as usize;
@@ -140,9 +149,9 @@ impl Filter for TruncateWordsFilter {
         let word_list: Vec<&str> = input_string.split(' ').collect();
         let result = if words < word_list.len() {
             let result = itertools::join(word_list.iter().take(l), " ") + truncate_string.as_str();
-            Value::scalar(result)
+            Value::scalar(result).into()
         } else {
-            input.to_value()
+            input
         };
         Ok(result)
     }

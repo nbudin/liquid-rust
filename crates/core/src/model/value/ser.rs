@@ -595,7 +595,7 @@ struct ObjectDeserializer<'de> {
 impl<'de> ObjectDeserializer<'de> {
     fn new(input: &'de dyn ObjectView) -> Self {
         Self {
-            iter: input.iter(),
+            iter: Box::new(input.iter().map(|(k, v)| (k, v))),
             value: None,
         }
     }
@@ -631,7 +631,7 @@ impl<'de> serde::de::MapAccess<'de> for ObjectDeserializer<'de> {
 }
 
 struct ArrayDeserializer<'de> {
-    iter: Box<dyn Iterator<Item = &'de dyn ValueView> + 'de>,
+    iter: Box<dyn Iterator<Item = &'de (dyn ValueView + 'de)> + 'de>,
 }
 
 impl<'de> ArrayDeserializer<'de> {

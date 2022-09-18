@@ -1,5 +1,7 @@
 use std::cmp;
+use std::rc::Rc;
 
+use liquid_core::model::SharedValueView;
 use liquid_core::Expression;
 use liquid_core::Result;
 use liquid_core::Runtime;
@@ -62,7 +64,7 @@ struct SliceFilter {
 }
 
 impl Filter for SliceFilter {
-    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate(&self, input: SharedValueView, runtime: &dyn Runtime) -> Result<SharedValueView> {
         let args = self.args.evaluate(runtime)?;
 
         let offset = args.offset as isize;
@@ -74,19 +76,13 @@ impl Filter for SliceFilter {
 
         if let Some(input) = input.as_array() {
             let (offset, length) = canonicalize_slice(offset, length, input.size() as usize);
-            Ok(Value::array(
-                input
-                    .values()
-                    .skip(offset)
-                    .take(length)
-                    .map(|s| s.to_value()),
-            ))
+            Ok(SharedValueView(Rc::new(
+                input.values().skip(offset).take(length).collect::<Vec<_>>(),
+            )))
         } else {
             let input = input.to_kstr();
             let (offset, length) = canonicalize_slice(offset, length, input.len());
-            Ok(Value::scalar(
-                input.chars().skip(offset).take(length).collect::<String>(),
-            ))
+            Ok(Value::scalar(input.chars().skip(offset).take(length).collect::<String>()).into())
         }
     }
 }

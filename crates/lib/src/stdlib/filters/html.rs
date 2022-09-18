@@ -1,3 +1,4 @@
+use liquid_core::model::SharedValueView;
 use liquid_core::Result;
 use liquid_core::Runtime;
 use liquid_core::{Display_filter, Filter, FilterReflection, ParseFilter};
@@ -17,9 +18,9 @@ fn nr_escaped(text: &str) -> usize {
 // The code is adapted from
 // https://github.com/rust-lang/rust/blob/master/src/librustdoc/html/escape.rs
 // Retrieved 2016-11-19.
-fn escape(input: &dyn ValueView, once_p: bool) -> Result<Value> {
+fn escape(input: SharedValueView, once_p: bool) -> Result<SharedValueView> {
     if input.is_nil() {
-        return Ok(Value::Nil);
+        return Ok(Value::Nil.into());
     }
     let s = input.to_kstr();
     let mut result = String::new();
@@ -59,7 +60,7 @@ fn escape(input: &dyn ValueView, once_p: bool) -> Result<Value> {
     if last < s.len() {
         result.push_str(&s[last..]);
     }
-    Ok(Value::scalar(result))
+    Ok(Value::scalar(result).into())
 }
 
 #[derive(Clone, ParseFilter, FilterReflection)]
@@ -75,7 +76,7 @@ pub struct Escape;
 struct EscapeFilter;
 
 impl Filter for EscapeFilter {
-    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate(&self, input: SharedValueView, _runtime: &dyn Runtime) -> Result<SharedValueView> {
         escape(input, false)
     }
 }
@@ -93,7 +94,7 @@ pub struct EscapeOnce;
 struct EscapeOnceFilter;
 
 impl Filter for EscapeOnceFilter {
-    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate(&self, input: SharedValueView, _runtime: &dyn Runtime) -> Result<SharedValueView> {
         escape(input, true)
     }
 }
@@ -120,13 +121,13 @@ static MATCHERS: once_cell::sync::Lazy<[Regex; 4]> = once_cell::sync::Lazy::new(
 });
 
 impl Filter for StripHtmlFilter {
-    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate(&self, input: SharedValueView, _runtime: &dyn Runtime) -> Result<SharedValueView> {
         let input = input.to_kstr().into_string();
 
         let result = MATCHERS.iter().fold(input, |acc, matcher| {
             matcher.replace_all(&acc, "").into_owned()
         });
-        Ok(Value::scalar(result))
+        Ok(Value::scalar(result).into())
     }
 }
 
@@ -143,10 +144,10 @@ pub struct NewlineToBr;
 struct NewlineToBrFilter;
 
 impl Filter for NewlineToBrFilter {
-    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate(&self, input: SharedValueView, _runtime: &dyn Runtime) -> Result<SharedValueView> {
         // TODO handle windows line endings
         let input = input.to_kstr();
-        Ok(Value::scalar(input.replace('\n', "<br />\n")))
+        Ok(Value::scalar(input.replace('\n', "<br />\n")).into())
     }
 }
 

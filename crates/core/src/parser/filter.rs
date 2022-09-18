@@ -1,7 +1,7 @@
 use std::fmt::{Debug, Display};
 
 use crate::error::Result;
-use crate::model::{Value, ValueView};
+use crate::model::SharedValueView;
 use crate::runtime::{Expression, Runtime};
 
 /// A structure that holds the information of a single parameter in a filter.
@@ -142,7 +142,11 @@ pub struct FilterArguments<'a> {
 /// ```
 pub trait Filter: Send + Sync + Debug + Display {
     // This will evaluate the expressions and evaluate the filter.
-    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value>;
+    fn evaluate<'s>(
+        &'s self,
+        input: SharedValueView<'s>,
+        runtime: &dyn Runtime,
+    ) -> Result<SharedValueView<'s>>;
 }
 
 /// A trait to register a new filter in the `liquid::Parser`.

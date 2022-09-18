@@ -1,3 +1,4 @@
+use liquid_core::model::SharedValueView;
 use liquid_core::Result;
 use liquid_core::Runtime;
 use liquid_core::{Display_filter, Filter, FilterReflection, ParseFilter};
@@ -23,15 +24,15 @@ pub struct UrlEncode;
 struct UrlEncodeFilter;
 
 impl Filter for UrlEncodeFilter {
-    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate(&self, input: SharedValueView, _runtime: &dyn Runtime) -> Result<SharedValueView> {
         if input.is_nil() {
-            return Ok(Value::Nil);
+            return Ok(Value::Nil.into());
         }
 
         let s = input.to_kstr();
 
         let result: String = percent_encoding::utf8_percent_encode(s.as_str(), FRAGMENT).collect();
-        Ok(Value::scalar(result))
+        Ok(Value::scalar(result).into())
     }
 }
 
@@ -48,9 +49,9 @@ pub struct UrlDecode;
 struct UrlDecodeFilter;
 
 impl Filter for UrlDecodeFilter {
-    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate(&self, input: SharedValueView, _runtime: &dyn Runtime) -> Result<SharedValueView> {
         if input.is_nil() {
-            return Ok(Value::Nil);
+            return Ok(Value::Nil.into());
         }
 
         let s = input.to_kstr().replace('+', " ");
@@ -59,7 +60,7 @@ impl Filter for UrlDecodeFilter {
             .decode_utf8()
             .map_err(|_| invalid_input("Malformed UTF-8"))?
             .into_owned();
-        Ok(Value::scalar(result))
+        Ok(Value::scalar(result).into())
     }
 }
 

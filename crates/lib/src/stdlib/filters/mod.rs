@@ -1,3 +1,4 @@
+use liquid_core::model::SharedValueView;
 use liquid_core::Expression;
 use liquid_core::Result;
 use liquid_core::Runtime;
@@ -43,15 +44,15 @@ pub struct Size;
 struct SizeFilter;
 
 impl Filter for SizeFilter {
-    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate(&self, input: SharedValueView, _runtime: &dyn Runtime) -> Result<SharedValueView> {
         if let Some(x) = input.as_scalar() {
-            Ok(Value::scalar(x.to_kstr().len() as i64))
+            Ok(Value::scalar(x.to_kstr().len() as i64).into())
         } else if let Some(x) = input.as_array() {
-            Ok(Value::scalar(x.size()))
+            Ok(Value::scalar(x.size()).into())
         } else if let Some(x) = input.as_object() {
-            Ok(Value::scalar(x.size()))
+            Ok(Value::scalar(x.size()).into())
         } else {
-            Ok(Value::scalar(0i64))
+            Ok(Value::scalar(0i64).into())
         }
     }
 }
@@ -79,13 +80,13 @@ struct DefaultFilter {
 }
 
 impl Filter for DefaultFilter {
-    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate(&self, input: SharedValueView, runtime: &dyn Runtime) -> Result<SharedValueView> {
         let args = self.args.evaluate(runtime)?;
 
         if input.query_state(liquid_core::model::State::DefaultValue) {
-            Ok(args.default.to_value())
+            Ok(args.default.into())
         } else {
-            Ok(input.to_value())
+            Ok(input)
         }
     }
 }

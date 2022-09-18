@@ -275,9 +275,10 @@ pub(crate) fn value_eq(lhs: &dyn ValueView, rhs: &dyn ValueView) -> bool {
         if x.size() != y.size() {
             return false;
         }
-        return x
-            .iter()
-            .all(|(key, value)| y.get(key.as_str()).map_or(false, |v| value_eq(v, value)));
+        return x.iter().all(|(key, value)| {
+            y.get(key.as_str())
+                .map_or(false, |v| value_eq(v.as_view(), value))
+        });
     }
 
     if lhs.is_nil() && rhs.is_nil() {
@@ -341,7 +342,7 @@ mod test {
 
     #[test]
     fn test_debug() {
-        let scalar = 5;
+        let scalar = 5i64;
         println!("{:?}", scalar);
         let view: &dyn ValueView = &scalar;
         println!("{:?}", view);

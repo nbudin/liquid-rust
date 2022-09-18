@@ -127,6 +127,7 @@ impl Renderable for Include {
 mod test {
     use std::borrow;
 
+    use liquid_core::model::SharedValueView;
     use liquid_core::parser;
     use liquid_core::partials;
     use liquid_core::partials::PartialCompiler;
@@ -184,15 +185,19 @@ mod test {
     pub struct SizeFilter;
 
     impl Filter for SizeFilter {
-        fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
+        fn evaluate(
+            &self,
+            input: SharedValueView,
+            _runtime: &dyn Runtime,
+        ) -> Result<SharedValueView> {
             if let Some(x) = input.as_scalar() {
-                Ok(Value::scalar(x.to_kstr().len() as i64))
+                Ok(Value::scalar(x.to_kstr().len() as i64).into())
             } else if let Some(x) = input.as_array() {
-                Ok(Value::scalar(x.size()))
+                Ok(Value::scalar(x.size()).into())
             } else if let Some(x) = input.as_object() {
-                Ok(Value::scalar(x.size()))
+                Ok(Value::scalar(x.size()).into())
             } else {
-                Ok(Value::scalar(0i64))
+                Ok(Value::scalar(0i64).into())
             }
         }
     }

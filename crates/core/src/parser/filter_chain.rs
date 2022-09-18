@@ -1,9 +1,10 @@
 use std::fmt;
 use std::io::Write;
+use std::rc::Rc;
 
 use super::Filter;
 use crate::error::{Result, ResultLiquidExt, ResultLiquidReplaceExt};
-use crate::model::{ValueCow, ValueView};
+use crate::model::{SharedValueView, ValueView};
 use crate::runtime::Expression;
 use crate::runtime::Renderable;
 use crate::runtime::Runtime;
@@ -22,21 +23,22 @@ impl FilterChain {
     }
 
     /// Process `Value` expression within `runtime`'s stack.
-    pub fn evaluate<'s>(&'s self, runtime: &'s dyn Runtime) -> Result<ValueCow<'s>> {
+    pub fn evaluate<'s>(&'s self, runtime: &'s dyn Runtime) -> Result<SharedValueView<'s>> {
         // take either the provided value or the value from the provided variable
         let mut entry = self.entry.evaluate(runtime)?;
 
         // apply all specified filters
         for filter in &self.filters {
-            entry = ValueCow::Owned(
+            let source = format!("{}", entry.source());
+            entry = SharedValueView(Rc::new(
                 filter
-                    .evaluate(entry.as_view(), runtime)
+                    .evaluate(entry, runtime)
                     .trace("Filter error")
                     .context_key("filter")
                     .value_with(|| format!("{}", filter).into())
                     .context_key("input")
-                    .value_with(|| format!("{}", entry.source()).into())?,
-            );
+                    .value(source)?,
+            ));
         }
 
         Ok(entry)

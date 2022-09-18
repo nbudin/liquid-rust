@@ -1,5 +1,6 @@
 #![allow(clippy::invisible_characters)]
 
+use liquid_core::model::SharedValueView;
 use liquid_core::Result;
 use liquid_core::Runtime;
 use liquid_core::{Display_filter, Filter, FilterReflection, ParseFilter};
@@ -18,9 +19,9 @@ pub struct Downcase;
 struct DowncaseFilter;
 
 impl Filter for DowncaseFilter {
-    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate(&self, input: SharedValueView, _runtime: &dyn Runtime) -> Result<SharedValueView> {
         let s = input.to_kstr();
-        Ok(Value::scalar(s.to_lowercase()))
+        Ok(Value::scalar(s.to_lowercase()).into())
     }
 }
 
@@ -37,9 +38,9 @@ pub struct Upcase;
 struct UpcaseFilter;
 
 impl Filter for UpcaseFilter {
-    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate(&self, input: SharedValueView, _runtime: &dyn Runtime) -> Result<SharedValueView> {
         let s = input.to_kstr();
-        Ok(Value::scalar(s.to_uppercase()))
+        Ok(Value::scalar(s.to_uppercase()).into())
     }
 }
 
@@ -56,7 +57,7 @@ pub struct Capitalize;
 struct CapitalizeFilter;
 
 impl Filter for CapitalizeFilter {
-    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate(&self, input: SharedValueView, _runtime: &dyn Runtime) -> Result<SharedValueView> {
         let s = input.to_kstr().to_owned();
         let mut chars = s.chars();
         let capitalized = match chars.next() {
@@ -64,7 +65,7 @@ impl Filter for CapitalizeFilter {
             None => String::new(),
         };
 
-        Ok(Value::scalar(capitalized))
+        Ok(Value::scalar(capitalized).into())
     }
 }
 

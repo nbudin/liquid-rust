@@ -1,6 +1,7 @@
 //! Type representing a Liquid array, payload of the `Value::Array` variant
 
 use std::fmt;
+use std::rc::Rc;
 
 use crate::model::KStringCow;
 
@@ -8,6 +9,8 @@ use crate::model::value::DisplayCow;
 use crate::model::State;
 use crate::model::Value;
 use crate::model::ValueView;
+
+use super::SharedValueView;
 
 /// Accessor for arrays.
 pub trait ArrayView: ValueView {
@@ -18,18 +21,18 @@ pub trait ArrayView: ValueView {
     fn size(&self) -> i64;
 
     /// Returns an iterator .
-    fn values<'k>(&'k self) -> Box<dyn Iterator<Item = &'k dyn ValueView> + 'k>;
+    fn values<'k>(&'k self) -> Box<dyn Iterator<Item = &'k (dyn ValueView + 'k)> + 'k>;
 
     /// Access a contained `Value`.
     fn contains_key(&self, index: i64) -> bool;
     /// Access a contained `Value`.
-    fn get(&self, index: i64) -> Option<&dyn ValueView>;
+    fn get(&self, index: i64) -> Option<SharedValueView>;
     /// Returns the first element.
-    fn first(&self) -> Option<&dyn ValueView> {
+    fn first(&self) -> Option<SharedValueView> {
         self.get(0)
     }
     /// Returns the last element.
-    fn last(&self) -> Option<&dyn ValueView> {
+    fn last(&self) -> Option<SharedValueView> {
         self.get(-1)
     }
 }
@@ -81,7 +84,7 @@ impl<T: ValueView> ArrayView for Vec<T> {
         self.len() as i64
     }
 
-    fn values<'k>(&'k self) -> Box<dyn Iterator<Item = &'k dyn ValueView> + 'k> {
+    fn values<'k>(&'k self) -> Box<dyn Iterator<Item = &'k (dyn ValueView + 'k)> + 'k> {
         let i = self.as_slice().iter().map(|v| convert_value(v));
         Box::new(i)
     }
@@ -91,10 +94,10 @@ impl<T: ValueView> ArrayView for Vec<T> {
         index < self.size()
     }
 
-    fn get(&self, index: i64) -> Option<&dyn ValueView> {
+    fn get(&self, index: i64) -> Option<SharedValueView> {
         let index = convert_index(index, self.size());
         let value = self.as_slice().get(index as usize);
-        value.map(|v| convert_value(v))
+        value.map(|v| SharedValueView(Rc::new(convert_value(v))))
     }
 }
 
@@ -107,7 +110,7 @@ impl<'a, A: ArrayView + ?Sized> ArrayView for &'a A {
         <A as ArrayView>::size(self)
     }
 
-    fn values<'k>(&'k self) -> Box<dyn Iterator<Item = &'k dyn ValueView> + 'k> {
+    fn values<'k>(&'k self) -> Box<dyn Iterator<Item = &'k (dyn ValueView + 'k)> + 'k> {
         <A as ArrayView>::values(self)
     }
 
@@ -115,7 +118,7 @@ impl<'a, A: ArrayView + ?Sized> ArrayView for &'a A {
         <A as ArrayView>::contains_key(self, index)
     }
 
-    fn get(&self, index: i64) -> Option<&dyn ValueView> {
+    fn get(&self, index: i64) -> Option<SharedValueView> {
         <A as ArrayView>::get(self, index)
     }
 }

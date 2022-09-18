@@ -2,7 +2,7 @@ use std::fmt;
 use std::io::Write;
 
 use liquid_core::error::{ResultLiquidExt, ResultLiquidReplaceExt};
-use liquid_core::model::{Object, ObjectView, Value, ValueCow, ValueView};
+use liquid_core::model::{Object, ObjectView, SharedValueView, Value, ValueView};
 use liquid_core::parser::BlockElement;
 use liquid_core::parser::TryMatchToken;
 use liquid_core::runtime::{Interrupt, InterruptRegister};
@@ -555,12 +555,12 @@ impl fmt::Display for RangeExpression {
 
 #[derive(Clone, Debug)]
 enum Range<'r> {
-    Array(ValueCow<'r>),
+    Array(SharedValueView<'r>),
     Counted(i64, i64),
 }
 
 impl<'r> Range<'r> {
-    pub fn evaluate(&self) -> Result<Vec<ValueCow<'_>>> {
+    pub fn evaluate(&self) -> Result<Vec<SharedValueView<'_>>> {
         let range = match self {
             Range::Array(array) => get_array(array.as_view())?,
 
@@ -574,9 +574,9 @@ impl<'r> Range<'r> {
     }
 }
 
-fn get_array(array: &dyn ValueView) -> Result<Vec<ValueCow<'_>>> {
+fn get_array(array: &dyn ValueView) -> Result<Vec<SharedValueView<'_>>> {
     if let Some(x) = array.as_array() {
-        Ok(x.values().map(|v| ValueCow::Borrowed(v)).collect())
+        Ok(x.values().map(SharedValueView::from_view).collect())
     } else if let Some(x) = array.as_object() {
         let x = x
             .iter()
@@ -608,11 +608,11 @@ fn int_argument(arg: &Expression, runtime: &dyn Runtime, arg_name: &str) -> Resu
 }
 
 fn iter_array(
-    mut range: Vec<ValueCow<'_>>,
+    mut range: Vec<SharedValueView<'_>>,
     limit: Option<usize>,
     offset: usize,
     reversed: bool,
-) -> Vec<ValueCow<'_>> {
+) -> Vec<SharedValueView<'_>> {
     let offset = ::std::cmp::min(offset, range.len());
     let limit = limit
         .map(|l| ::std::cmp::min(l, range.len()))
@@ -965,8 +965,12 @@ mod test {
     pub struct ShoutFilter;
 
     impl Filter for ShoutFilter {
-        fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
-            Ok(Value::scalar(input.to_kstr().to_uppercase()))
+        fn evaluate(
+            &self,
+            input: SharedValueView,
+            _runtime: &dyn Runtime,
+        ) -> Result<SharedValueView> {
+            Ok(Value::scalar(input.to_kstr().to_uppercase()).into())
         }
     }
 

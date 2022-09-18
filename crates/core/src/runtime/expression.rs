@@ -1,9 +1,10 @@
 use std::fmt;
+use std::rc::Rc;
 
 use crate::error::Result;
 use crate::model::Scalar;
+use crate::model::SharedValueView;
 use crate::model::Value;
-use crate::model::ValueCow;
 use crate::model::ValueView;
 
 use super::variable::Variable;
@@ -41,9 +42,9 @@ impl Expression {
     }
 
     /// Convert to a `Value`.
-    pub fn try_evaluate<'c>(&'c self, runtime: &'c dyn Runtime) -> Option<ValueCow<'c>> {
+    pub fn try_evaluate<'c>(&'c self, runtime: &'c dyn Runtime) -> Option<SharedValueView<'c>> {
         match self {
-            Expression::Literal(ref x) => Some(ValueCow::Borrowed(x)),
+            Expression::Literal(ref x) => Some(SharedValueView(Rc::new(x))),
             Expression::Variable(ref x) => {
                 let path = x.try_evaluate(runtime)?;
                 runtime.try_get(&path)
@@ -52,9 +53,9 @@ impl Expression {
     }
 
     /// Convert to a `Value`.
-    pub fn evaluate<'c>(&'c self, runtime: &'c dyn Runtime) -> Result<ValueCow<'c>> {
+    pub fn evaluate<'c>(&'c self, runtime: &'c dyn Runtime) -> Result<SharedValueView<'c>> {
         let val = match self {
-            Expression::Literal(ref x) => ValueCow::Borrowed(x),
+            Expression::Literal(ref x) => SharedValueView(Rc::new(x)),
             Expression::Variable(ref x) => {
                 let path = x.evaluate(runtime)?;
                 runtime.get(&path)?

@@ -1,3 +1,4 @@
+use liquid_core::model::SharedValueView;
 use liquid_core::Result;
 use liquid_core::Runtime;
 use liquid_core::{Display_filter, Filter, FilterReflection, ParseFilter};
@@ -23,9 +24,9 @@ pub struct Strip;
 struct StripFilter;
 
 impl Filter for StripFilter {
-    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate(&self, input: SharedValueView, _runtime: &dyn Runtime) -> Result<SharedValueView> {
         let input = input.to_kstr();
-        Ok(Value::scalar(input.trim().to_owned()))
+        Ok(Value::scalar(input.trim().to_owned()).into())
     }
 }
 
@@ -48,9 +49,9 @@ pub struct Lstrip;
 struct LstripFilter;
 
 impl Filter for LstripFilter {
-    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate(&self, input: SharedValueView, _runtime: &dyn Runtime) -> Result<SharedValueView> {
         let input = input.to_kstr();
-        Ok(Value::scalar(input.trim_start().to_owned()))
+        Ok(Value::scalar(input.trim_start().to_owned()).into())
     }
 }
 
@@ -73,9 +74,9 @@ pub struct Rstrip;
 struct RstripFilter;
 
 impl Filter for RstripFilter {
-    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate(&self, input: SharedValueView, _runtime: &dyn Runtime) -> Result<SharedValueView> {
         let input = input.to_kstr();
-        Ok(Value::scalar(input.trim_end().to_owned()))
+        Ok(Value::scalar(input.trim_end().to_owned()).into())
     }
 }
 
@@ -92,14 +93,15 @@ pub struct StripNewlines;
 struct StripNewlinesFilter;
 
 impl Filter for StripNewlinesFilter {
-    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate(&self, input: SharedValueView, _runtime: &dyn Runtime) -> Result<SharedValueView> {
         let input = input.to_kstr();
         Ok(Value::scalar(
             input
                 .chars()
                 .filter(|c| *c != '\n' && *c != '\r')
                 .collect::<String>(),
-        ))
+        )
+        .into())
     }
 }
 

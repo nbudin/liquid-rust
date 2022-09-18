@@ -1,13 +1,14 @@
 //! Find a `ValueView` nested in an `ObjectView`
 
 use std::fmt;
+use std::rc::Rc;
 use std::slice;
 
 use crate::error::Result;
 
 use super::ScalarCow;
+use super::SharedValueView;
 use super::Value;
-use super::ValueCow;
 use super::ValueView;
 
 /// Path to a value in an `Object`.
@@ -116,73 +117,48 @@ impl<'i, 's: 'i> ExactSizeIterator for PathIter<'i, 's> {
 }
 
 /// Find a `ValueView` nested in an `ObjectView`
-pub fn try_find<'o>(value: &'o dyn ValueView, path: &[ScalarCow<'_>]) -> Option<ValueCow<'o>> {
-    let indexes = path.iter();
-    try_find_borrowed(value, indexes)
-}
-
-fn try_find_borrowed<'o, 'i>(
+pub fn try_find<'o>(
     value: &'o dyn ValueView,
-    mut path: impl Iterator<Item = &'i ScalarCow<'i>>,
-) -> Option<ValueCow<'o>> {
-    let index = match path.next() {
-        Some(index) => index,
-        None => {
-            return Some(ValueCow::Borrowed(value));
-        }
-    };
-    let child = augmented_get(value, index)?;
-    match child {
-        ValueCow::Owned(child) => try_find_owned(child, path),
-        ValueCow::Borrowed(child) => try_find_borrowed(child, path),
+    path: &[ScalarCow<'_>],
+) -> Option<SharedValueView<'o>> {
+    let mut indexes = path.iter();
+    let mut current = SharedValueView(Rc::new(value));
+    loop {
+        let index = match indexes.next() {
+            Some(index) => index,
+            None => {
+                return Some(current);
+            }
+        };
+        current = augmented_get(value, index)?;
     }
 }
 
-fn try_find_owned<'o, 'i>(
-    value: Value,
-    mut path: impl Iterator<Item = &'i ScalarCow<'i>>,
-) -> Option<ValueCow<'o>> {
-    let index = match path.next() {
-        Some(index) => index,
-        None => {
-            return Some(ValueCow::Owned(value));
-        }
-    };
-    let child = augmented_get(&value, index)?;
-    match child {
-        ValueCow::Owned(child) => try_find_owned(child, path),
-        ValueCow::Borrowed(child) => {
-            try_find_borrowed(child, path).map(|v| ValueCow::Owned(v.into_owned()))
-        }
-    }
-}
-
-fn augmented_get<'o>(value: &'o dyn ValueView, index: &ScalarCow<'_>) -> Option<ValueCow<'o>> {
+fn augmented_get<'o>(
+    value: &'o dyn ValueView,
+    index: &ScalarCow<'_>,
+) -> Option<SharedValueView<'o>> {
     if let Some(arr) = value.as_array() {
         if let Some(index) = index.to_integer_strict() {
-            arr.get(index).map(ValueCow::Borrowed)
+            arr.get(index)
         } else {
             match &*index.to_kstr() {
-                "first" => arr.first().map(ValueCow::Borrowed),
-                "last" => arr.last().map(ValueCow::Borrowed),
-                "size" => Some(ValueCow::Owned(Value::scalar(arr.size()))),
+                "first" => arr.first(),
+                "last" => arr.last(),
+                "size" => Some(Value::scalar(arr.size()).into()),
                 _ => None,
             }
         }
     } else if let Some(obj) = value.as_object() {
         let index = index.to_kstr();
-        obj.get(index.as_str())
-            .map(ValueCow::Borrowed)
-            .or_else(|| match index.as_str() {
-                "size" => Some(ValueCow::Owned(Value::scalar(obj.size()))),
-                _ => None,
-            })
+        obj.get(index.as_str()).or_else(|| match index.as_str() {
+            "size" => Some(Value::scalar(obj.size()).into()),
+            _ => None,
+        })
     } else if let Some(scalar) = value.as_scalar() {
         let index = index.to_kstr();
         match index.as_str() {
-            "size" => Some(ValueCow::Owned(Value::scalar(
-                scalar.to_kstr().as_str().len() as i64,
-            ))),
+            "size" => Some(Value::scalar(scalar.to_kstr().as_str().len() as i64).into()),
             _ => None,
         }
     } else {
@@ -191,10 +167,10 @@ fn augmented_get<'o>(value: &'o dyn ValueView, index: &ScalarCow<'_>) -> Option<
 }
 
 /// Find a `ValueView` nested in an `ObjectView`
-pub fn find<'o>(value: &'o dyn ValueView, path: &[ScalarCow<'_>]) -> Result<ValueCow<'o>> {
+pub fn find<'o>(value: &'o dyn ValueView, path: &[ScalarCow<'_>]) -> Result<SharedValueView<'o>> {
     if let Some(res) = try_find(value, path) {
         Ok(res)
     } else {
-        Ok(ValueCow::Owned(Value::Nil))
+        Ok(Value::Nil.into())
     }
 }

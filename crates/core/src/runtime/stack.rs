@@ -1,6 +1,7 @@
 use crate::error::Error;
 use crate::error::Result;
-use crate::model::{Object, ObjectView, ScalarCow, Value, ValueCow, ValueView};
+use crate::model::SharedValueView;
+use crate::model::{Object, ObjectView, ScalarCow, Value, ValueView};
 
 /// Layer variables on top of the existing runtime
 pub struct StackFrame<P, O> {
@@ -44,7 +45,7 @@ impl<P: super::Runtime, O: ObjectView> super::Runtime for StackFrame<P, O> {
         roots
     }
 
-    fn try_get(&self, path: &[ScalarCow<'_>]) -> Option<ValueCow<'_>> {
+    fn try_get(&self, path: &[ScalarCow<'_>]) -> Option<SharedValueView<'_>> {
         let key = path.first()?;
         let key = key.to_kstr();
         let data = &self.data;
@@ -55,7 +56,7 @@ impl<P: super::Runtime, O: ObjectView> super::Runtime for StackFrame<P, O> {
         }
     }
 
-    fn get(&self, path: &[ScalarCow<'_>]) -> Result<ValueCow<'_>> {
+    fn get(&self, path: &[ScalarCow<'_>]) -> Result<SharedValueView<'_>> {
         let key = path.first().ok_or_else(|| {
             Error::with_msg("Unknown variable").context("requested variable", "nil")
         })?;
@@ -80,7 +81,7 @@ impl<P: super::Runtime, O: ObjectView> super::Runtime for StackFrame<P, O> {
         self.parent.set_index(name, val)
     }
 
-    fn get_index<'a>(&'a self, name: &str) -> Option<ValueCow<'a>> {
+    fn get_index<'a>(&'a self, name: &str) -> Option<SharedValueView<'a>> {
         self.parent.get_index(name)
     }
 
@@ -118,7 +119,7 @@ impl<P: super::Runtime> super::Runtime for GlobalFrame<P> {
         roots
     }
 
-    fn try_get(&self, path: &[ScalarCow<'_>]) -> Option<ValueCow<'_>> {
+    fn try_get(&self, path: &[ScalarCow<'_>]) -> Option<SharedValueView<'_>> {
         let key = path.first()?;
         let key = key.to_kstr();
         let data = self.data.borrow();
@@ -129,7 +130,7 @@ impl<P: super::Runtime> super::Runtime for GlobalFrame<P> {
         }
     }
 
-    fn get(&self, path: &[ScalarCow<'_>]) -> Result<ValueCow<'_>> {
+    fn get(&self, path: &[ScalarCow<'_>]) -> Result<SharedValueView<'_>> {
         let key = path.first().ok_or_else(|| {
             Error::with_msg("Unknown variable").context("requested variable", "nil")
         })?;
@@ -155,7 +156,7 @@ impl<P: super::Runtime> super::Runtime for GlobalFrame<P> {
         self.parent.set_index(name, val)
     }
 
-    fn get_index<'a>(&'a self, name: &str) -> Option<ValueCow<'a>> {
+    fn get_index<'a>(&'a self, name: &str) -> Option<SharedValueView<'a>> {
         self.parent.get_index(name)
     }
 
@@ -193,7 +194,7 @@ impl<P: super::Runtime> super::Runtime for IndexFrame<P> {
         roots
     }
 
-    fn try_get(&self, path: &[ScalarCow<'_>]) -> Option<ValueCow<'_>> {
+    fn try_get(&self, path: &[ScalarCow<'_>]) -> Option<SharedValueView<'_>> {
         let key = path.first()?;
         let key = key.to_kstr();
         let data = self.data.borrow();
@@ -204,7 +205,7 @@ impl<P: super::Runtime> super::Runtime for IndexFrame<P> {
         }
     }
 
-    fn get(&self, path: &[ScalarCow<'_>]) -> Result<ValueCow<'_>> {
+    fn get(&self, path: &[ScalarCow<'_>]) -> Result<SharedValueView<'_>> {
         let key = path.first().ok_or_else(|| {
             Error::with_msg("Unknown variable").context("requested variable", "nil")
         })?;
@@ -230,7 +231,7 @@ impl<P: super::Runtime> super::Runtime for IndexFrame<P> {
         data.insert(name, val)
     }
 
-    fn get_index<'a>(&'a self, name: &str) -> Option<ValueCow<'a>> {
+    fn get_index<'a>(&'a self, name: &str) -> Option<SharedValueView<'a>> {
         self.data.borrow().get(name).map(|v| v.to_value().into())
     }
 

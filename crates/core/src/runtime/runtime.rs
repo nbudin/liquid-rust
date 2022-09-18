@@ -2,7 +2,8 @@ use std::sync;
 
 use crate::error::Error;
 use crate::error::Result;
-use crate::model::{Object, ObjectView, Scalar, ScalarCow, Value, ValueCow, ValueView};
+use crate::model::SharedValueView;
+use crate::model::{Object, ObjectView, Scalar, ScalarCow, Value, ValueView};
 
 use super::PartialStore;
 use super::Renderable;
@@ -18,9 +19,9 @@ pub trait Runtime {
     /// All available values
     fn roots(&self) -> std::collections::BTreeSet<crate::model::KStringCow<'_>>;
     /// Recursively index into the stack.
-    fn try_get(&self, path: &[ScalarCow<'_>]) -> Option<ValueCow<'_>>;
+    fn try_get(&self, path: &[ScalarCow<'_>]) -> Option<SharedValueView<'_>>;
     /// Recursively index into the stack.
-    fn get(&self, path: &[ScalarCow<'_>]) -> Result<ValueCow<'_>>;
+    fn get(&self, path: &[ScalarCow<'_>]) -> Result<SharedValueView<'_>>;
 
     /// Sets a value in the global runtime.
     fn set_global(
@@ -32,7 +33,7 @@ pub trait Runtime {
     /// Used by increment and decrement tags
     fn set_index(&self, name: crate::model::KString, val: Value) -> Option<Value>;
     /// Used by increment and decrement tags
-    fn get_index<'a>(&'a self, name: &str) -> Option<ValueCow<'a>>;
+    fn get_index<'a>(&'a self, name: &str) -> Option<SharedValueView<'a>>;
 
     /// Unnamed state for plugins during rendering
     fn registers(&self) -> &Registers;
@@ -51,11 +52,11 @@ impl<'r, R: Runtime + ?Sized> Runtime for &'r R {
         <R as Runtime>::roots(self)
     }
 
-    fn try_get(&self, path: &[ScalarCow<'_>]) -> Option<ValueCow<'_>> {
+    fn try_get(&self, path: &[ScalarCow<'_>]) -> Option<SharedValueView<'_>> {
         <R as Runtime>::try_get(self, path)
     }
 
-    fn get(&self, path: &[ScalarCow<'_>]) -> Result<ValueCow<'_>> {
+    fn get(&self, path: &[ScalarCow<'_>]) -> Result<SharedValueView<'_>> {
         <R as Runtime>::get(self, path)
     }
 
@@ -71,7 +72,7 @@ impl<'r, R: Runtime + ?Sized> Runtime for &'r R {
         <R as Runtime>::set_index(self, name, val)
     }
 
-    fn get_index<'a>(&'a self, name: &str) -> Option<ValueCow<'a>> {
+    fn get_index<'a>(&'a self, name: &str) -> Option<SharedValueView<'a>> {
         <R as Runtime>::get_index(self, name)
     }
 
@@ -176,14 +177,15 @@ impl ObjectView for NullObject {
         Box::new(keys)
     }
 
-    fn values<'k>(&'k self) -> Box<dyn Iterator<Item = &'k dyn ValueView> + 'k> {
+    fn values<'k>(&'k self) -> Box<dyn Iterator<Item = &'k (dyn ValueView + 'k)> + 'k> {
         let i = Vec::new().into_iter();
         Box::new(i)
     }
 
     fn iter<'k>(
         &'k self,
-    ) -> Box<dyn Iterator<Item = (crate::model::KStringCow<'k>, &'k dyn ValueView)> + 'k> {
+    ) -> Box<dyn Iterator<Item = (crate::model::KStringCow<'k>, &'k (dyn ValueView + 'k))> + 'k>
+    {
         let i = Vec::new().into_iter();
         Box::new(i)
     }
@@ -192,7 +194,7 @@ impl ObjectView for NullObject {
         false
     }
 
-    fn get<'s>(&'s self, _index: &str) -> Option<&'s dyn ValueView> {
+    fn get<'s>(&'s self, _index: &str) -> Option<SharedValueView<'s>> {
         None
     }
 }
@@ -238,11 +240,11 @@ impl<'g> Runtime for RuntimeCore<'g> {
         std::collections::BTreeSet::new()
     }
 
-    fn try_get(&self, _path: &[ScalarCow<'_>]) -> Option<ValueCow<'_>> {
+    fn try_get(&self, _path: &[ScalarCow<'_>]) -> Option<SharedValueView<'_>> {
         None
     }
 
-    fn get(&self, path: &[ScalarCow<'_>]) -> Result<ValueCow<'_>> {
+    fn get(&self, path: &[ScalarCow<'_>]) -> Result<SharedValueView<'_>> {
         let key = path.first().cloned().unwrap_or_else(|| Scalar::new("nil"));
         Error::with_msg("Unknown variable")
             .context("requested variable", key.to_kstr())
@@ -261,7 +263,7 @@ impl<'g> Runtime for RuntimeCore<'g> {
         unreachable!("Must be masked by a global frame");
     }
 
-    fn get_index<'a>(&'a self, _name: &str) -> Option<ValueCow<'a>> {
+    fn get_index<'a>(&'a self, _name: &str) -> Option<SharedValueView<'a>> {
         None
     }
 
@@ -382,11 +384,14 @@ mod test {
             let new_scope = super::super::StackFrame::new(&rt, &data);
 
             // assert that values are chained to the parent scope
-            assert_eq!(&new_scope.get(&test_path).unwrap(), &ValueViewCmp::new(&3));
+            assert_eq!(
+                &new_scope.get(&test_path).unwrap(),
+                &ValueViewCmp::new(&3i64)
+            );
         }
 
         // assert that the value has reverted to the old one
-        assert_eq!(&rt.get(&test_path).unwrap(), &ValueViewCmp::new(&42));
+        assert_eq!(&rt.get(&test_path).unwrap(), &ValueViewCmp::new(&42i64));
     }
 
     #[test]

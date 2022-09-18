@@ -2,8 +2,8 @@ use std::fmt;
 
 use crate::error::{Error, Result};
 use crate::model::Scalar;
+use crate::model::ValueView;
 use crate::model::{Path, ScalarCow};
-use crate::model::{ValueCow, ValueView};
 
 use super::Expression;
 use super::Runtime;
@@ -36,10 +36,7 @@ impl Variable {
         path.reserve(self.indexes.len());
         for expr in &self.indexes {
             let v = expr.try_evaluate(runtime)?;
-            let s = match v {
-                ValueCow::Owned(v) => v.into_scalar(),
-                ValueCow::Borrowed(v) => v.as_scalar(),
-            }?;
+            let s = v.to_value().into_scalar()?;
             path.push(s);
         }
         Some(path)
@@ -54,11 +51,7 @@ impl Variable {
             if v.is_nil() {
                 path.push(ScalarCow::new(""));
             } else {
-                let s = match v {
-                    ValueCow::Owned(v) => v.into_scalar(),
-                    ValueCow::Borrowed(v) => v.as_scalar(),
-                }
-                .ok_or_else(|| {
+                let s = v.to_value().into_scalar().ok_or_else(|| {
                     let v = expr.evaluate(runtime).expect("lookup already verified");
                     let v = v.source();
                     let msg = format!("Expected scalar, found `{}`", v);
@@ -160,6 +153,6 @@ test_a:
         let runtime = StackFrame::new(&runtime, &globals);
         let actual = var.evaluate(&runtime).unwrap();
         let actual = runtime.get(&actual).unwrap();
-        assert_eq!(actual, ValueViewCmp::new(&5));
+        assert_eq!(actual, ValueViewCmp::new(&5i64));
     }
 }

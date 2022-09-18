@@ -1,3 +1,4 @@
+use liquid_core::model::SharedValueView;
 use liquid_core::Expression;
 use liquid_core::Result;
 use liquid_core::Runtime;
@@ -37,13 +38,13 @@ struct SplitFilter {
 }
 
 impl Filter for SplitFilter {
-    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate(&self, input: SharedValueView, runtime: &dyn Runtime) -> Result<SharedValueView> {
         let args = self.args.evaluate(runtime)?;
 
         let input = input.to_kstr();
 
         if input.is_empty() {
-            Ok(Value::Array(Vec::new()))
+            Ok(Value::Array(Vec::new()).into())
         } else {
             // Split and construct resulting Array
             Ok(Value::Array(
@@ -51,7 +52,8 @@ impl Filter for SplitFilter {
                     .split(args.pattern.as_str())
                     .map(|s| Value::scalar(s.to_owned()))
                     .collect(),
-            ))
+            )
+            .into())
         }
     }
 }
