@@ -142,7 +142,11 @@ pub struct FilterArguments<'a> {
 /// ```
 pub trait Filter: Send + Sync + Debug + Display {
     // This will evaluate the expressions and evaluate the filter.
-    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value>;
+    fn evaluate<'s>(
+        &'s self,
+        input: &'s dyn ValueView,
+        runtime: &'s dyn Runtime,
+    ) -> Result<&'s dyn ValueView>;
 }
 
 /// A trait to register a new filter in the `liquid::Parser`.

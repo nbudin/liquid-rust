@@ -28,7 +28,7 @@ impl FilterChain {
 
         // apply all specified filters
         for filter in &self.filters {
-            entry = ValueCow::Owned(
+            entry = ValueCow::Borrowed(
                 filter
                     .evaluate(entry.as_view(), runtime)
                     .trace("Filter error")
