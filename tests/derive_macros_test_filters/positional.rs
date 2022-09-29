@@ -1,3 +1,4 @@
+use liquid::model::SharedValueView;
 use liquid_core::Expression;
 use liquid_core::Result;
 use liquid_core::Runtime;
@@ -35,7 +36,7 @@ pub struct TestPositionalFilter {
 }
 
 impl Filter for TestPositionalFilter {
-    fn evaluate(&self, _input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate(&self, _input: &dyn ValueView, runtime: &dyn Runtime) -> Result<SharedValueView> {
         let args = self.args.evaluate(runtime)?;
 
         let pos1 = args.pos1.to_kstr();
@@ -45,6 +46,6 @@ impl Filter for TestPositionalFilter {
             format!("<pos1: {}>", pos1)
         };
 
-        Ok(Value::scalar(result))
+        Ok(Value::scalar(result).into())
     }
 }

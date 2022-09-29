@@ -1,3 +1,4 @@
+use liquid::model::SharedValueView;
 use liquid_core::Expression;
 use liquid_core::Result;
 use liquid_core::Runtime;
@@ -17,8 +18,8 @@ pub struct MakeFunnyFilterParser;
 pub struct MakeFunnyFilter;
 
 impl Filter for MakeFunnyFilter {
-    fn evaluate(&self, _input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
-        Ok(Value::scalar("LOL"))
+    fn evaluate(&self, _input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<SharedValueView> {
+        Ok(Value::scalar("LOL").into())
     }
 }
 
@@ -35,8 +36,8 @@ pub struct CiteFunnyFilterParser;
 pub struct CiteFunnyFilter;
 
 impl Filter for CiteFunnyFilter {
-    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
-        Ok(Value::scalar(format!("LOL: {}", input.render())))
+    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<SharedValueView> {
+        Ok(Value::scalar(format!("LOL: {}", input.render())).into())
     }
 }
 
@@ -63,10 +64,10 @@ pub struct AddSmileyFilter {
 }
 
 impl Filter for AddSmileyFilter {
-    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<SharedValueView> {
         let args = self.args.evaluate(runtime)?;
         let smiley = args.smiley.unwrap_or_else(|| ":-)".into()).to_string();
-        Ok(Value::scalar(format!("{} {}", input.render(), smiley)))
+        Ok(Value::scalar(format!("{} {}", input.render(), smiley)).into())
     }
 }
 
@@ -96,7 +97,7 @@ pub struct AddTagFilter {
 }
 
 impl Filter for AddTagFilter {
-    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<SharedValueView> {
         let args = self.args.evaluate(runtime)?;
 
         let tag = args.tag.unwrap_or_else(|| "p".into()).to_string();
@@ -107,7 +108,8 @@ impl Filter for AddTagFilter {
             id,
             input.render(),
             tag
-        )))
+        ))
+        .into())
     }
 }
 
@@ -124,8 +126,8 @@ pub struct ParagraphFilterParser;
 pub struct ParagraphFilter;
 
 impl Filter for ParagraphFilter {
-    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
-        Ok(Value::scalar(format!("<p>{}</p>", input.render())))
+    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<SharedValueView> {
+        Ok(Value::scalar(format!("<p>{}</p>", input.render())).into())
     }
 }
 
@@ -152,16 +154,12 @@ pub struct LinkToFilter {
 }
 
 impl Filter for LinkToFilter {
-    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<SharedValueView> {
         let args = self.args.evaluate(runtime)?;
 
         let name = input;
         let url = args.url.unwrap_or_else(|| ":-)".into()).to_string();
-        Ok(Value::scalar(format!(
-            r#"<a href="{}">{}</a>"#,
-            url,
-            name.render()
-        )))
+        Ok(Value::scalar(format!(r#"<a href="{}">{}</a>"#, url, name.render())).into())
     }
 }
 

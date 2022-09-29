@@ -12,14 +12,18 @@ use crate::model::object::{Object, ObjectView};
 use crate::model::scalar::{Scalar, ScalarCow};
 
 #[derive(Clone, Debug)]
-pub struct SharedValueView<'s>(pub Rc<dyn ValueView + 's>);
+pub struct SharedValueView<'s>(pub Rc<Box<dyn ValueView + 's>>);
 
 impl<'s> SharedValueView<'s> {
     pub fn from_value(value: Value) -> Self {
-        SharedValueView(Rc::new(value))
+        SharedValueView(Rc::new(Box::new(value)))
     }
 
     pub fn from_view(view: &'s (dyn ValueView + 's)) -> Self {
+        SharedValueView(Rc::new(Box::new(view)))
+    }
+
+    pub fn from_boxed_view(view: Box<dyn ValueView + 's>) -> Self {
         SharedValueView(Rc::new(view))
     }
 
@@ -32,7 +36,7 @@ impl<'s> SharedValueView<'s> {
 
     /// Performs the conversion.
     pub fn as_view(&self) -> &dyn ValueView {
-        self.0.as_ref()
+        self.0.as_ref().as_ref()
     }
 }
 
@@ -84,43 +88,61 @@ impl<'s> ValueView for SharedValueView<'s> {
 
 impl From<Value> for SharedValueView<'static> {
     fn from(other: Value) -> Self {
-        SharedValueView(Rc::new(other))
+        SharedValueView::from_value(other)
     }
 }
 
 impl<'s> From<&'s Value> for SharedValueView<'s> {
     fn from(other: &'s Value) -> Self {
-        SharedValueView(Rc::new(other.as_view()))
+        SharedValueView::from_view(other)
     }
 }
 
 impl From<Scalar> for SharedValueView<'static> {
     fn from(other: Scalar) -> Self {
-        SharedValueView(Rc::new(Value::Scalar(other)))
+        SharedValueView::from_value(Value::Scalar(other))
     }
 }
 
 impl From<Array> for SharedValueView<'static> {
     fn from(other: Array) -> Self {
-        SharedValueView(Rc::new(Value::Array(other)))
+        SharedValueView::from_value(Value::Array(other))
     }
 }
 
 impl From<Object> for SharedValueView<'static> {
     fn from(other: Object) -> Self {
-        SharedValueView(Rc::new(Value::Object(other)))
+        SharedValueView::from_value(Value::Object(other))
     }
 }
 
 impl From<State> for SharedValueView<'static> {
     fn from(other: State) -> Self {
-        SharedValueView(Rc::new(Value::State(other)))
+        SharedValueView::from_value(Value::State(other))
+    }
+}
+
+impl<'s> From<&'s (dyn ValueView + 's)> for SharedValueView<'s> {
+    fn from(other: &'s (dyn ValueView + 's)) -> Self {
+        SharedValueView::from_view(other)
+    }
+}
+
+impl<'s> From<Box<dyn ValueView + 's>> for SharedValueView<'s> {
+    fn from(other: Box<dyn ValueView + 's>) -> Self {
+        SharedValueView::from_boxed_view(other)
     }
 }
 
 impl<'v> Default for SharedValueView<'v> {
     fn default() -> Self {
-        SharedValueView(Rc::new(Value::default()))
+        SharedValueView::from_value(Value::default())
+    }
+}
+
+impl<'v> PartialEq<Value> for SharedValueView<'v> {
+    fn eq(&self, other: &Value) -> bool {
+        super::value_eq(self.as_view(), other.as_view())
     }
 }
 
@@ -133,12 +155,6 @@ impl<'v> PartialEq<SharedValueView<'v>> for SharedValueView<'v> {
 impl<'v> PartialEq<ValueViewCmp<'v>> for SharedValueView<'v> {
     fn eq(&self, other: &ValueViewCmp<'v>) -> bool {
         ValueViewCmp::new(self.as_view()) == *other
-    }
-}
-
-impl<'v> PartialEq<Value> for SharedValueView<'v> {
-    fn eq(&self, other: &Value) -> bool {
-        super::value_eq(self.as_view(), other.as_view())
     }
 }
 

@@ -70,7 +70,7 @@ struct TruncateFilter {
 impl Filter for TruncateFilter {
     fn evaluate<'s>(
         &'s self,
-        input: SharedValueView<'s>,
+        input: &'s (dyn ValueView + 's),
         runtime: &dyn Runtime,
     ) -> Result<SharedValueView<'s>> {
         let args = self.args.evaluate(runtime)?;
@@ -93,7 +93,7 @@ impl Filter for TruncateFilter {
                 + truncate_string.as_str();
             Value::scalar(result).into()
         } else {
-            input
+            SharedValueView::from_view(input)
         };
         Ok(result)
     }
@@ -133,7 +133,7 @@ struct TruncateWordsFilter {
 impl Filter for TruncateWordsFilter {
     fn evaluate<'s>(
         &'s self,
-        input: SharedValueView<'s>,
+        input: &'s (dyn ValueView + 's),
         runtime: &dyn Runtime,
     ) -> Result<SharedValueView<'s>> {
         let args = self.args.evaluate(runtime)?;
@@ -151,7 +151,7 @@ impl Filter for TruncateWordsFilter {
             let result = itertools::join(word_list.iter().take(l), " ") + truncate_string.as_str();
             Value::scalar(result).into()
         } else {
-            input
+            SharedValueView::from_view(input)
         };
         Ok(result)
     }

@@ -1,3 +1,4 @@
+use liquid::model::SharedValueView;
 use liquid_core::parser::FilterArguments;
 use liquid_core::Expression;
 use liquid_core::Result;
@@ -66,7 +67,7 @@ pub struct TestStatefulFilter {
 }
 
 impl Filter for TestStatefulFilter {
-    fn evaluate(&self, _input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate(&self, _input: &dyn ValueView, runtime: &dyn Runtime) -> Result<SharedValueView> {
         let args = self.args.evaluate(runtime)?;
 
         let result = match self.state {
@@ -75,6 +76,6 @@ impl Filter for TestStatefulFilter {
             Mood::Neutral => format!(":-| {} :-|", args.arg),
         };
 
-        Ok(Value::scalar(result))
+        Ok(Value::scalar(result).into())
     }
 }

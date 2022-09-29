@@ -18,7 +18,7 @@ fn nr_escaped(text: &str) -> usize {
 // The code is adapted from
 // https://github.com/rust-lang/rust/blob/master/src/librustdoc/html/escape.rs
 // Retrieved 2016-11-19.
-fn escape(input: SharedValueView, once_p: bool) -> Result<SharedValueView> {
+fn escape(input: &dyn ValueView, once_p: bool) -> Result<SharedValueView> {
     if input.is_nil() {
         return Ok(Value::Nil.into());
     }
@@ -76,7 +76,11 @@ pub struct Escape;
 struct EscapeFilter;
 
 impl Filter for EscapeFilter {
-    fn evaluate(&self, input: SharedValueView, _runtime: &dyn Runtime) -> Result<SharedValueView> {
+    fn evaluate<'s>(
+        &self,
+        input: &'s (dyn ValueView + 's),
+        _runtime: &dyn Runtime,
+    ) -> Result<SharedValueView<'s>> {
         escape(input, false)
     }
 }
@@ -94,7 +98,11 @@ pub struct EscapeOnce;
 struct EscapeOnceFilter;
 
 impl Filter for EscapeOnceFilter {
-    fn evaluate(&self, input: SharedValueView, _runtime: &dyn Runtime) -> Result<SharedValueView> {
+    fn evaluate<'s>(
+        &'s self,
+        input: &'s (dyn ValueView + 's),
+        _runtime: &dyn Runtime,
+    ) -> Result<SharedValueView<'s>> {
         escape(input, true)
     }
 }
@@ -121,7 +129,7 @@ static MATCHERS: once_cell::sync::Lazy<[Regex; 4]> = once_cell::sync::Lazy::new(
 });
 
 impl Filter for StripHtmlFilter {
-    fn evaluate(&self, input: SharedValueView, _runtime: &dyn Runtime) -> Result<SharedValueView> {
+    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<SharedValueView> {
         let input = input.to_kstr().into_string();
 
         let result = MATCHERS.iter().fold(input, |acc, matcher| {
@@ -144,7 +152,7 @@ pub struct NewlineToBr;
 struct NewlineToBrFilter;
 
 impl Filter for NewlineToBrFilter {
-    fn evaluate(&self, input: SharedValueView, _runtime: &dyn Runtime) -> Result<SharedValueView> {
+    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<SharedValueView> {
         // TODO handle windows line endings
         let input = input.to_kstr();
         Ok(Value::scalar(input.replace('\n', "<br />\n")).into())

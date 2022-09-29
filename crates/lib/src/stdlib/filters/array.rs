@@ -1,5 +1,4 @@
 use std::cmp;
-use std::rc::Rc;
 
 use liquid_core::model::SharedValueView;
 use liquid_core::model::ValueViewCmp;
@@ -14,14 +13,14 @@ use liquid_core::{Value, ValueView};
 use crate::{invalid_argument, invalid_input};
 
 fn as_sequence<'k>(
-    input: SharedValueView<'k>,
+    input: &'k (dyn ValueView + 'k),
 ) -> Box<dyn Iterator<Item = &'k (dyn ValueView + 'k)> + 'k> {
     if let Some(array) = input.as_array() {
         array.values()
     } else if input.is_nil() {
         Box::new(vec![].into_iter())
     } else {
-        Box::new(std::iter::once(input.as_view()))
+        Box::new(std::iter::once(input))
     }
 }
 
@@ -51,7 +50,7 @@ struct JoinFilter {
 }
 
 impl Filter for JoinFilter {
-    fn evaluate(&self, input: SharedValueView, runtime: &dyn Runtime) -> Result<SharedValueView> {
+    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<SharedValueView> {
         let args = self.args.evaluate(runtime)?;
 
         let separator = args.separator.unwrap_or_else(|| " ".into());
@@ -120,13 +119,13 @@ fn safe_property_getter<'a>(value: &'a dyn ValueView, property: &str) -> SharedV
     value
         .as_object()
         .and_then(|obj| obj.get(property))
-        .unwrap_or(Value::Nil.into())
+        .unwrap_or_else(|| Value::Nil.into())
 }
 
 impl Filter for SortFilter {
     fn evaluate<'s>(
         &'s self,
-        input: SharedValueView<'s>,
+        input: &'s (dyn ValueView + 's),
         runtime: &dyn Runtime,
     ) -> Result<SharedValueView<'s>> {
         let args = self.args.evaluate(runtime)?;
@@ -136,7 +135,7 @@ impl Filter for SortFilter {
             return Err(invalid_input("Array of objects expected"));
         }
 
-        let mut sorted: Vec<&dyn ValueView> = input.iter().cloned().collect();
+        let mut sorted: Vec<&dyn ValueView> = input.into_iter().collect();
         if let Some(property) = &args.property {
             // Using unwrap is ok since all of the elements are objects
             sorted.sort_by(|a, b| {
@@ -149,7 +148,7 @@ impl Filter for SortFilter {
         } else {
             sorted.sort_by(|a, b| nil_safe_compare(a, b).unwrap_or(cmp::Ordering::Equal));
         }
-        Ok(SharedValueView(Rc::new(sorted)))
+        Ok(SharedValueView::from_boxed_view(Box::new(sorted)))
     }
 }
 
@@ -172,8 +171,8 @@ struct SortNaturalFilter {
 impl Filter for SortNaturalFilter {
     fn evaluate<'s>(
         &'s self,
-        input: SharedValueView<'s>,
-        runtime: &dyn Runtime,
+        input: &'s (dyn ValueView + 's),
+        runtime: &'s (dyn Runtime + 's),
     ) -> Result<SharedValueView<'s>> {
         let args = self.args.evaluate(runtime)?;
 
@@ -184,7 +183,7 @@ impl Filter for SortNaturalFilter {
 
         let mut sorted: Vec<_> = if let Some(property) = &args.property {
             input
-                .iter()
+                .into_iter()
                 .map(|v| {
                     (
                         nil_safe_casecmp_key(&safe_property_getter(&v, property).to_value()),
@@ -194,13 +193,13 @@ impl Filter for SortNaturalFilter {
                 .collect()
         } else {
             input
-                .iter()
+                .into_iter()
                 .map(|v| (nil_safe_casecmp_key(&v), v))
                 .collect()
         };
         sorted.sort_by(|a, b| nil_safe_casecmp(&a.0, &b.0).unwrap_or(cmp::Ordering::Equal));
         let result: Vec<_> = sorted.into_iter().map(|(_, v)| v).collect();
-        Ok(SharedValueView(Rc::new(result)))
+        Ok(SharedValueView::from_boxed_view(Box::new(result)))
     }
 }
 
@@ -233,7 +232,7 @@ struct WhereFilter {
 }
 
 impl Filter for WhereFilter {
-    fn evaluate(&self, input: SharedValueView, runtime: &dyn Runtime) -> Result<SharedValueView> {
+    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<SharedValueView> {
         let args = self.args.evaluate(runtime)?;
         let property: &str = &args.property;
         let target_value: Option<SharedValueView<'_>> = args.target_value;
@@ -246,7 +245,7 @@ impl Filter for WhereFilter {
             return Ok(Value::Nil.into());
         }
 
-        let input = as_sequence(input);
+        let input = as_sequence(&input);
         let array: Vec<_> = match target_value {
             None => input
                 .filter_map(|v| v.as_object())
@@ -288,7 +287,7 @@ pub struct Uniq;
 struct UniqFilter;
 
 impl Filter for UniqFilter {
-    fn evaluate(&self, input: SharedValueView, _runtime: &dyn Runtime) -> Result<SharedValueView> {
+    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<SharedValueView> {
         // TODO(#267) optional property parameter
 
         let array = input
@@ -320,7 +319,7 @@ pub struct Reverse;
 struct ReverseFilter;
 
 impl Filter for ReverseFilter {
-    fn evaluate(&self, input: SharedValueView, _runtime: &dyn Runtime) -> Result<SharedValueView> {
+    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<SharedValueView> {
         let mut array: Vec<_> = input
             .as_array()
             .ok_or_else(|| invalid_input("Array expected"))?
@@ -358,7 +357,7 @@ struct MapFilter {
 }
 
 impl Filter for MapFilter {
-    fn evaluate(&self, input: SharedValueView, runtime: &dyn Runtime) -> Result<SharedValueView> {
+    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<SharedValueView> {
         let args = self.args.evaluate(runtime)?;
 
         if input.is_nil() {
@@ -398,7 +397,7 @@ struct CompactFilter {
 }
 
 impl Filter for CompactFilter {
-    fn evaluate(&self, input: SharedValueView, runtime: &dyn Runtime) -> Result<SharedValueView> {
+    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<SharedValueView> {
         let args = self.args.evaluate(runtime)?;
 
         let array = input
@@ -454,7 +453,7 @@ struct ConcatFilter {
 }
 
 impl Filter for ConcatFilter {
-    fn evaluate(&self, input: SharedValueView, runtime: &dyn Runtime) -> Result<SharedValueView> {
+    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<SharedValueView> {
         let args = self.args.evaluate(runtime)?;
 
         let input = input
@@ -489,7 +488,7 @@ struct FirstFilter;
 impl Filter for FirstFilter {
     fn evaluate<'s>(
         &self,
-        input: SharedValueView<'s>,
+        input: &'s (dyn ValueView + 's),
         _runtime: &dyn Runtime,
     ) -> Result<SharedValueView<'s>> {
         if let Some(x) = input.as_scalar() {
@@ -523,7 +522,7 @@ struct LastFilter;
 impl Filter for LastFilter {
     fn evaluate<'s>(
         &'s self,
-        input: SharedValueView<'s>,
+        input: &'s (dyn ValueView + 's),
         _runtime: &dyn Runtime,
     ) -> Result<SharedValueView<'s>> {
         if let Some(x) = input.as_scalar() {
@@ -535,9 +534,7 @@ impl Filter for LastFilter {
                 .unwrap_or_else(|| "".to_owned());
             Ok(Value::scalar(c).into())
         } else if let Some(x) = input.as_array() {
-            Ok(x.last()
-                .map(|v| v.clone())
-                .unwrap_or_else(|| Value::Nil.into()))
+            Ok(x.last().unwrap_or_else(|| Value::Nil.into()))
         } else {
             Err(invalid_input("String or Array expected"))
         }

@@ -1,7 +1,6 @@
 //! Find a `ValueView` nested in an `ObjectView`
 
 use std::fmt;
-use std::rc::Rc;
 use std::slice;
 
 use crate::error::Result;
@@ -14,7 +13,7 @@ use super::ValueView;
 /// Path to a value in an `Object`.
 ///
 /// There is guaranteed always at least one element.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Path<'s>(Vec<ScalarCow<'s>>);
 
 impl<'s> Path<'s> {
@@ -122,7 +121,7 @@ pub fn try_find<'o>(
     path: &[ScalarCow<'_>],
 ) -> Option<SharedValueView<'o>> {
     let mut indexes = path.iter();
-    let mut current = SharedValueView(Rc::new(value));
+    let mut current = SharedValueView::from_view(value);
     loop {
         let index = match indexes.next() {
             Some(index) => index,

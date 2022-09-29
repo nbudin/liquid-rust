@@ -1,6 +1,5 @@
 //! A liquid value`
 
-mod cow;
 mod display;
 mod shared;
 mod state;
@@ -9,7 +8,6 @@ mod view;
 
 pub(crate) mod ser;
 
-pub use cow::*;
 pub use display::*;
 pub use ser::*;
 pub use shared::*;

@@ -20,7 +20,7 @@ pub use liquid_derive::{
     Display_filter, FilterParameters, FilterReflection, FromFilterParameters, ParseFilter,
 };
 pub use model::{to_object, Object};
-pub use model::{to_value, Value, ValueCow};
+pub use model::{to_value, Value};
 pub use model::{ObjectView, ValueView};
 pub use parser::Language;
 pub use parser::TagTokenIter;

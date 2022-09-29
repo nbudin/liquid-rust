@@ -1,3 +1,4 @@
+use liquid::model::SharedValueView;
 use liquid_core::Expression;
 use liquid_core::Result;
 use liquid_core::Runtime;
@@ -40,7 +41,7 @@ pub struct TestKeywordFilter {
 }
 
 impl Filter for TestKeywordFilter {
-    fn evaluate(&self, _input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate(&self, _input: &dyn ValueView, runtime: &dyn Runtime) -> Result<SharedValueView> {
         let args = self.args.evaluate(runtime)?;
 
         let required = args.required;
@@ -51,6 +52,6 @@ impl Filter for TestKeywordFilter {
             format!("<required: {}>", required)
         };
 
-        Ok(Value::scalar(result))
+        Ok(Value::scalar(result).into())
     }
 }

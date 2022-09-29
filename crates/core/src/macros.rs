@@ -391,8 +391,8 @@ macro_rules! call_filter {
         let runtime = $crate::runtime::RuntimeBuilder::new().build();
 
         let input = $crate::value!($input);
+        let filter = $crate::ParseFilter::parse(&$filter, args).unwrap();
 
-        $crate::ParseFilter::parse(&$filter, args)
-            .and_then(|filter| $crate::Filter::evaluate(&*filter, input.into(), &runtime))
+        $crate::Filter::evaluate(&*filter, &input, &runtime).map(|shared_value_view| shared_value_view.to_value())
     }};
 }

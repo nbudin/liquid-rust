@@ -3,6 +3,7 @@ use std::fmt::{Debug, Display};
 use crate::error::Result;
 use crate::model::SharedValueView;
 use crate::runtime::{Expression, Runtime};
+use crate::ValueView;
 
 /// A structure that holds the information of a single parameter in a filter.
 /// This includes its name, description and whether it is optional or required.
@@ -144,8 +145,8 @@ pub trait Filter: Send + Sync + Debug + Display {
     // This will evaluate the expressions and evaluate the filter.
     fn evaluate<'s>(
         &'s self,
-        input: SharedValueView<'s>,
-        runtime: &dyn Runtime,
+        input: &'s (dyn ValueView + 's),
+        runtime: &'s (dyn Runtime + 's),
     ) -> Result<SharedValueView<'s>>;
 }
 

@@ -967,7 +967,7 @@ mod test {
     impl Filter for ShoutFilter {
         fn evaluate(
             &self,
-            input: SharedValueView,
+            input: &dyn ValueView,
             _runtime: &dyn Runtime,
         ) -> Result<SharedValueView> {
             Ok(Value::scalar(input.to_kstr().to_uppercase()).into())

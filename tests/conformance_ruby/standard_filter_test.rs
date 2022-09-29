@@ -455,7 +455,7 @@ fn test_sort_when_property_is_sometimes_missing_puts_nils_last() {
         vec![v!({ "handle": "beta" }), v!({ "handle": "delta" })],
     );
     let result = call_filter!(liquid_lib::stdlib::Sort, input, v!("price")).unwrap();
-    let result = result.into_array();
+    let result = result.to_value().into_array();
     assert!(result.is_some());
     let result = result.unwrap();
     assert_eq!(expectation_start, &result[..3]);
@@ -523,7 +523,7 @@ fn test_sort_natural_when_property_is_sometimes_missing_puts_nils_last() {
         vec![v!({ "handle": "beta" }), v!({ "handle": "delta" })],
     );
     let result = call_filter!(liquid_lib::stdlib::SortNatural, input, v!("price")).unwrap();
-    let result = result.into_array();
+    let result = result.to_value().into_array();
     assert!(result.is_some());
     let result = result.unwrap();
     assert_eq!(expectation_start, &result[..3]);

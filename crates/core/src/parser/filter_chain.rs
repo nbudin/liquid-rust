@@ -29,16 +29,17 @@ impl FilterChain {
 
         // apply all specified filters
         for filter in &self.filters {
-            let source = format!("{}", entry.source());
-            entry = SharedValueView(Rc::new(
-                filter
-                    .evaluate(entry, runtime)
-                    .trace("Filter error")
-                    .context_key("filter")
-                    .value_with(|| format!("{}", filter).into())
-                    .context_key("input")
-                    .value(source)?,
-            ));
+            let prev_entry = Rc::try_unwrap(entry.0)
+                .map_err(|_e| crate::error::Error::with_msg("Couldn't unwrap in filter chain"))?;
+            let source = format!("{}", prev_entry.source());
+
+            entry = filter
+                .evaluate(Box::leak(prev_entry), runtime)
+                .trace("Filter error")
+                .context_key("filter")
+                .value_with(|| format!("{}", filter).into())
+                .context_key("input")
+                .value_with(|| source.into())?;
         }
 
         Ok(entry)

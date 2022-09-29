@@ -1,3 +1,4 @@
+use liquid::model::SharedValueView;
 use liquid_core::Expression;
 use liquid_core::Result;
 use liquid_core::Runtime;
@@ -53,7 +54,7 @@ pub struct TestMixedFilter {
 
 #[allow(clippy::many_single_char_names)]
 impl Filter for TestMixedFilter {
-    fn evaluate(&self, _input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
+    fn evaluate(&self, _input: &dyn ValueView, runtime: &dyn Runtime) -> Result<SharedValueView> {
         let args = self.args.evaluate(runtime)?;
 
         let a = args
@@ -78,6 +79,6 @@ impl Filter for TestMixedFilter {
             a, b, c, d, e, f, g
         );
 
-        Ok(Value::scalar(result))
+        Ok(Value::scalar(result).into())
     }
 }

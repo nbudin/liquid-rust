@@ -187,7 +187,7 @@ mod test {
     impl Filter for SizeFilter {
         fn evaluate(
             &self,
-            input: SharedValueView,
+            input: &dyn ValueView,
             _runtime: &dyn Runtime,
         ) -> Result<SharedValueView> {
             if let Some(x) = input.as_scalar() {

@@ -64,10 +64,10 @@ pub fn derive(input: &DeriveInput) -> TokenStream {
                 }
             }
 
-            fn get<'liquid_derive_s>(&'liquid_derive_s self, index: &str) -> Option<&'liquid_derive_s dyn ::liquid::ValueView> {
+            fn get<'liquid_derive_s>(&'liquid_derive_s self, index: &str) -> Option<::liquid_core::model::SharedValueView<'liquid_derive_s>> {
                 match index {
                     #(
-                        stringify!(#fields) => Some(&self.#fields),
+                        stringify!(#fields) => Some(::liquid_core::model::SharedValueView::from_view(&self.#fields)),
                     )*
                     _ => None,
                 }
@@ -141,7 +141,7 @@ pub fn core_derive(input: &DeriveInput) -> TokenStream {
             fn get<'liquid_derive_s>(&'liquid_derive_s self, index: &str) -> Option<::liquid_core::model::SharedValueView<'liquid_derive_s>> {
                 match index {
                     #(
-                        stringify!(#fields) => Some(::liquid_core::model::SharedValueView(::std::rc::Rc::new(self.#fields))),
+                        stringify!(#fields) => Some(::liquid_core::model::SharedValueView(::std::rc::Rc::new(::std::boxed::Box::new(self.#fields)))),
                     )*
                     _ => None,
                 }

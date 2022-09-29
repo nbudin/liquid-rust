@@ -24,7 +24,7 @@ pub struct Abs;
 struct AbsFilter;
 
 impl Filter for AbsFilter {
-    fn evaluate(&self, input: SharedValueView, _runtime: &dyn Runtime) -> Result<SharedValueView> {
+    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<SharedValueView> {
         let input = input
             .as_scalar()
             .ok_or_else(|| invalid_input("Number expected"))?;
@@ -59,7 +59,7 @@ struct AtLeastFilter {
 }
 
 impl Filter for AtLeastFilter {
-    fn evaluate(&self, input: SharedValueView, runtime: &dyn Runtime) -> Result<SharedValueView> {
+    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<SharedValueView> {
         let args = self.args.evaluate(runtime)?;
 
         let input = input
@@ -111,7 +111,7 @@ struct AtMostFilter {
 }
 
 impl Filter for AtMostFilter {
-    fn evaluate(&self, input: SharedValueView, runtime: &dyn Runtime) -> Result<SharedValueView> {
+    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<SharedValueView> {
         let args = self.args.evaluate(runtime)?;
 
         let input = input
@@ -163,7 +163,7 @@ struct PlusFilter {
 }
 
 impl Filter for PlusFilter {
-    fn evaluate(&self, input: SharedValueView, runtime: &dyn Runtime) -> Result<SharedValueView> {
+    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<SharedValueView> {
         let args = self.args.evaluate(runtime)?;
 
         let input = input
@@ -216,7 +216,7 @@ struct MinusFilter {
 }
 
 impl Filter for MinusFilter {
-    fn evaluate(&self, input: SharedValueView, runtime: &dyn Runtime) -> Result<SharedValueView> {
+    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<SharedValueView> {
         let args = self.args.evaluate(runtime)?;
 
         let input = input
@@ -269,7 +269,7 @@ struct TimesFilter {
 }
 
 impl Filter for TimesFilter {
-    fn evaluate(&self, input: SharedValueView, runtime: &dyn Runtime) -> Result<SharedValueView> {
+    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<SharedValueView> {
         let args = self.args.evaluate(runtime)?;
 
         let input = input
@@ -322,7 +322,7 @@ struct DividedByFilter {
 }
 
 impl Filter for DividedByFilter {
-    fn evaluate(&self, input: SharedValueView, runtime: &dyn Runtime) -> Result<SharedValueView> {
+    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<SharedValueView> {
         let args = self.args.evaluate(runtime)?;
 
         let input = input
@@ -385,7 +385,7 @@ struct ModuloFilter {
 }
 
 impl Filter for ModuloFilter {
-    fn evaluate(&self, input: SharedValueView, runtime: &dyn Runtime) -> Result<SharedValueView> {
+    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<SharedValueView> {
         let args = self.args.evaluate(runtime)?;
 
         let input = input
@@ -451,7 +451,7 @@ struct RoundFilter {
 }
 
 impl Filter for RoundFilter {
-    fn evaluate(&self, input: SharedValueView, runtime: &dyn Runtime) -> Result<SharedValueView> {
+    fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<SharedValueView> {
         let args = self.args.evaluate(runtime)?;
 
         let n = args.decimal_places.unwrap_or(0);
@@ -488,7 +488,7 @@ pub struct Ceil;
 struct CeilFilter;
 
 impl Filter for CeilFilter {
-    fn evaluate(&self, input: SharedValueView, _runtime: &dyn Runtime) -> Result<SharedValueView> {
+    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<SharedValueView> {
         let n = input
             .as_scalar()
             .and_then(|s| s.to_float())
@@ -510,7 +510,7 @@ pub struct Floor;
 struct FloorFilter;
 
 impl Filter for FloorFilter {
-    fn evaluate(&self, input: SharedValueView, _runtime: &dyn Runtime) -> Result<SharedValueView> {
+    fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<SharedValueView> {
         let n = input
             .as_scalar()
             .and_then(|s| s.to_float())

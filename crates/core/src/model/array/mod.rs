@@ -1,7 +1,6 @@
 //! Type representing a Liquid array, payload of the `Value::Array` variant
 
 use std::fmt;
-use std::rc::Rc;
 
 use crate::model::KStringCow;
 
@@ -97,7 +96,7 @@ impl<T: ValueView> ArrayView for Vec<T> {
     fn get(&self, index: i64) -> Option<SharedValueView> {
         let index = convert_index(index, self.size());
         let value = self.as_slice().get(index as usize);
-        value.map(|v| SharedValueView(Rc::new(convert_value(v))))
+        value.map(|v| SharedValueView::from_view(convert_value(v)))
     }
 }
 

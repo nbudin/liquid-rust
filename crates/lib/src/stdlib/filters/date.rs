@@ -30,7 +30,11 @@ struct DateFilter {
 }
 
 impl Filter for DateFilter {
-    fn evaluate(&self, input: SharedValueView, runtime: &dyn Runtime) -> Result<SharedValueView> {
+    fn evaluate<'s>(
+        &'s self,
+        input: &'s (dyn ValueView + 's),
+        runtime: &dyn Runtime,
+    ) -> Result<SharedValueView<'s>> {
         let args = self.args.evaluate(runtime)?;
 
         let date = input.as_scalar().and_then(|s| s.to_date_time());
@@ -42,7 +46,7 @@ impl Filter for DateFilter {
 
                 Ok(Value::scalar(s).into())
             }
-            _ => Ok(input),
+            _ => Ok(SharedValueView::from_view(input)),
         }
     }
 }

@@ -6,6 +6,7 @@ use std::fmt;
 use crate::model::KStringCow;
 
 use super::DisplayCow;
+use super::SharedValueView;
 use super::State;
 use super::{ValueView, ValueViewCmp};
 use crate::model::array::{Array, ArrayView};
@@ -237,6 +238,12 @@ impl PartialEq<Value> for Value {
     }
 }
 
+impl<'v> PartialEq<SharedValueView<'v>> for Value {
+    fn eq(&self, other: &SharedValueView<'v>) -> bool {
+        ValueViewCmp::new(self.as_view()) == ValueViewCmp::new(other.as_view())
+    }
+}
+
 impl<'v> PartialEq<ValueViewCmp<'v>> for Value {
     fn eq(&self, other: &ValueViewCmp<'v>) -> bool {
         ValueViewCmp::new(self.as_view()) == *other
@@ -286,7 +293,7 @@ impl<'s> PartialEq<&'s str> for Value {
     }
 }
 
-impl<'s> PartialEq<String> for Value {
+impl PartialEq<String> for Value {
     fn eq(&self, other: &String) -> bool {
         super::value_eq(self.as_view(), other)
     }
