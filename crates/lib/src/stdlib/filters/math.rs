@@ -1,5 +1,6 @@
 use std::convert::TryInto;
 
+use lazy_static::lazy_static;
 use liquid_core::value;
 use liquid_core::Expression;
 use liquid_core::Result;
@@ -19,7 +20,9 @@ fn coalesce_nil<'a>(value: &'a dyn ValueView, default: &'a dyn ValueView) -> &'a
     }
 }
 
-static ZERO: Value = value!(0);
+lazy_static! {
+    static ref ZERO: Value = value!(0);
+}
 
 #[derive(Clone, ParseFilter, FilterReflection)]
 #[filter(
@@ -35,7 +38,7 @@ struct AbsFilter;
 
 impl Filter for AbsFilter {
     fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
-        let input = coalesce_nil(input, &ZERO)
+        let input = coalesce_nil(input, &*ZERO)
             .as_scalar()
             .ok_or_else(|| invalid_input("Number expected"))?;
         input
@@ -72,11 +75,11 @@ impl Filter for AtLeastFilter {
     fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
         let args = self.args.evaluate(runtime)?;
 
-        let input = coalesce_nil(input, &ZERO)
+        let input = coalesce_nil(input, &*ZERO)
             .as_scalar()
             .ok_or_else(|| invalid_input("Number expected"))?;
 
-        let min = coalesce_nil(&args.min, &ZERO)
+        let min = coalesce_nil(&args.min, &*ZERO)
             .as_scalar()
             .ok_or_else(|| invalid_argument("operand", "Number expected"))?;
 
@@ -120,11 +123,11 @@ impl Filter for AtMostFilter {
     fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
         let args = self.args.evaluate(runtime)?;
 
-        let input = coalesce_nil(input, &ZERO)
+        let input = coalesce_nil(input, &*ZERO)
             .as_scalar()
             .ok_or_else(|| invalid_input("Number expected"))?;
 
-        let max = coalesce_nil(&args.max, &ZERO)
+        let max = coalesce_nil(&args.max, &*ZERO)
             .as_scalar()
             .ok_or_else(|| invalid_argument("operand", "Number expected"))?;
 
@@ -168,11 +171,11 @@ impl Filter for PlusFilter {
     fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
         let args = self.args.evaluate(runtime)?;
 
-        let input = coalesce_nil(input, &ZERO)
+        let input = coalesce_nil(input, &*ZERO)
             .as_scalar()
             .ok_or_else(|| invalid_input("Number expected"))?;
 
-        let operand = coalesce_nil(&args.operand, &ZERO)
+        let operand = coalesce_nil(&args.operand, &*ZERO)
             .as_scalar()
             .ok_or_else(|| invalid_argument("operand", "Number expected"))?;
 
@@ -216,11 +219,11 @@ impl Filter for MinusFilter {
     fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
         let args = self.args.evaluate(runtime)?;
 
-        let input = coalesce_nil(input, &ZERO)
+        let input = coalesce_nil(input, &*ZERO)
             .as_scalar()
             .ok_or_else(|| invalid_input("Number expected"))?;
 
-        let operand = coalesce_nil(&args.operand, &ZERO)
+        let operand = coalesce_nil(&args.operand, &*ZERO)
             .as_scalar()
             .ok_or_else(|| invalid_argument("operand", "Number expected"))?;
 
@@ -264,11 +267,11 @@ impl Filter for TimesFilter {
     fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
         let args = self.args.evaluate(runtime)?;
 
-        let input = coalesce_nil(input, &ZERO)
+        let input = coalesce_nil(input, &*ZERO)
             .as_scalar()
             .ok_or_else(|| invalid_input("Number expected"))?;
 
-        let operand = coalesce_nil(&args.operand, &ZERO)
+        let operand = coalesce_nil(&args.operand, &*ZERO)
             .as_scalar()
             .ok_or_else(|| invalid_argument("operand", "Number expected"))?;
 
@@ -312,11 +315,11 @@ impl Filter for DividedByFilter {
     fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
         let args = self.args.evaluate(runtime)?;
 
-        let input = coalesce_nil(input, &ZERO)
+        let input = coalesce_nil(input, &*ZERO)
             .as_scalar()
             .ok_or_else(|| invalid_input("Number expected"))?;
 
-        let operand = coalesce_nil(&args.operand, &ZERO)
+        let operand = coalesce_nil(&args.operand, &*ZERO)
             .as_scalar()
             .ok_or_else(|| invalid_argument("operand", "Number expected"))?;
 
@@ -370,11 +373,11 @@ impl Filter for ModuloFilter {
     fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
         let args = self.args.evaluate(runtime)?;
 
-        let input = coalesce_nil(input, &ZERO)
+        let input = coalesce_nil(input, &*ZERO)
             .as_scalar()
             .ok_or_else(|| invalid_input("Number expected"))?;
 
-        let operand = coalesce_nil(&args.operand, &ZERO)
+        let operand = coalesce_nil(&args.operand, &*ZERO)
             .as_scalar()
             .ok_or_else(|| invalid_argument("operand", "Number expected"))?;
 
@@ -433,7 +436,7 @@ impl Filter for RoundFilter {
 
         let n = args.decimal_places.unwrap_or(0);
 
-        let input = coalesce_nil(input, &ZERO)
+        let input = coalesce_nil(input, &*ZERO)
             .as_scalar()
             .and_then(|s| s.to_float())
             .ok_or_else(|| invalid_input("Number expected"))?;
@@ -466,7 +469,7 @@ struct CeilFilter;
 
 impl Filter for CeilFilter {
     fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
-        let n = coalesce_nil(input, &ZERO)
+        let n = coalesce_nil(input, &*ZERO)
             .as_scalar()
             .and_then(|s| s.to_float())
             .ok_or_else(|| invalid_input("Number expected"))?;
@@ -488,7 +491,7 @@ struct FloorFilter;
 
 impl Filter for FloorFilter {
     fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
-        let n = coalesce_nil(input, &ZERO)
+        let n = coalesce_nil(input, &*ZERO)
             .as_scalar()
             .and_then(|s| s.to_float())
             .ok_or_else(|| invalid_input("Number expected"))?;
