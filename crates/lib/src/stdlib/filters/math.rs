@@ -1,5 +1,6 @@
 use std::convert::TryInto;
 
+use liquid_core::value;
 use liquid_core::Expression;
 use liquid_core::Result;
 use liquid_core::Runtime;
@@ -9,6 +10,14 @@ use liquid_core::{
 use liquid_core::{Value, ValueView};
 
 use crate::{invalid_argument, invalid_input};
+
+fn coalesce_nil<'a>(value: &'a dyn ValueView, default: &'a dyn ValueView) -> &'a dyn ValueView {
+    if value.is_nil() {
+        default
+    } else {
+        value
+    }
+}
 
 #[derive(Clone, ParseFilter, FilterReflection)]
 #[filter(
@@ -158,13 +167,13 @@ struct PlusFilter {
 impl Filter for PlusFilter {
     fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
         let args = self.args.evaluate(runtime)?;
+        let zero = value!(0);
 
-        let input = input
+        let input = coalesce_nil(input, &zero)
             .as_scalar()
             .ok_or_else(|| invalid_input("Number expected"))?;
 
-        let operand = args
-            .operand
+        let operand = coalesce_nil(&args.operand, &zero)
             .as_scalar()
             .ok_or_else(|| invalid_argument("operand", "Number expected"))?;
 
