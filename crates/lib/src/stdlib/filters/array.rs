@@ -1,6 +1,7 @@
 use std::cmp;
 
 use liquid_core::model::ValueViewCmp;
+use liquid_core::value;
 use liquid_core::Expression;
 use liquid_core::Result;
 use liquid_core::Runtime;
@@ -10,6 +11,8 @@ use liquid_core::{
 use liquid_core::{Value, ValueCow, ValueView};
 
 use crate::{invalid_argument, invalid_input};
+
+static EMPTY_ARRAY: Value = Value::Array(vec![]);
 
 fn as_sequence<'k>(input: &'k dyn ValueView) -> Box<dyn Iterator<Item = &'k dyn ValueView> + 'k> {
     if let Some(array) = input.as_array() {
@@ -51,8 +54,9 @@ impl Filter for JoinFilter {
         let args = self.args.evaluate(runtime)?;
 
         let separator = args.separator.unwrap_or_else(|| " ".into());
+        let coerced_input = if input.is_nil() { &EMPTY_ARRAY } else { input };
 
-        let input = input
+        let input = coerced_input
             .as_array()
             .ok_or_else(|| invalid_input("Array of strings expected"))?;
         let input = input.values().map(|x| x.to_kstr());
