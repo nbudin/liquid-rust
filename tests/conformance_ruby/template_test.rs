@@ -148,8 +148,9 @@ fn test_nil_value_does_not_raise() {
 }
 
 #[test]
-fn test_undefined_variables_raise() {
-    assert_render_error!(
+fn test_undefined_variables_do_not_raise() {
+    assert_template_result!(
+        "33  32  ",
         "{{x}} {{y}} {{z.a}} {{z.b}} {{z.c.d}}",
         o!({ "x": 33, "z": { "a": 32, "c": { "e": 31 } } }),
     );

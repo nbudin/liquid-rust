@@ -333,9 +333,12 @@ fn test_assign() {
 
 #[test]
 fn test_assign_unassigned() {
-    // Implementation specific: strict_variables is enabled, testing that instead.
     let assigns = o!({ "var": "content" });
-    assert_render_error!("var2:{{var2}} {%assign var2 = var%} var2:{{var2}}", assigns);
+    assert_template_result!(
+        "var2:  var2:content",
+        "var2:{{var2}} {%assign var2 = var%} var2:{{var2}}",
+        assigns
+    );
 }
 
 #[test]

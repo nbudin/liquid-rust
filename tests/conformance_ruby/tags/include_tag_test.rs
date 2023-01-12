@@ -81,7 +81,6 @@ fn test_include_tag_for() {
 }
 
 #[test]
-#[should_panic] // fails due to strict_variables
 fn test_include_tag_with_local_variables() {
     assert_template_result!(
         "Locale: test123 ",

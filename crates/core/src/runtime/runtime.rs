@@ -2,7 +2,7 @@ use std::sync;
 
 use crate::error::Error;
 use crate::error::Result;
-use crate::model::{Object, ObjectView, Scalar, ScalarCow, Value, ValueCow, ValueView};
+use crate::model::{Object, ObjectView, ScalarCow, Value, ValueCow, ValueView};
 
 use super::PartialStore;
 use super::Renderable;
@@ -242,11 +242,8 @@ impl<'g> Runtime for RuntimeCore<'g> {
         None
     }
 
-    fn get(&self, path: &[ScalarCow<'_>]) -> Result<ValueCow<'_>> {
-        let key = path.first().cloned().unwrap_or_else(|| Scalar::new("nil"));
-        Error::with_msg("Unknown variable")
-            .context("requested variable", key.to_kstr())
-            .into_err()
+    fn get(&self, _path: &[ScalarCow<'_>]) -> Result<ValueCow<'_>> {
+        Ok(ValueCow::Owned(Value::Nil))
     }
 
     fn set_global(
