@@ -452,12 +452,26 @@ impl Filter for ConcatFilter {
 
         let input = input
             .as_array()
+            .or_else(|| {
+                if input.is_nil() {
+                    Some(EMPTY_ARRAY.as_array().unwrap())
+                } else {
+                    None
+                }
+            })
             .ok_or_else(|| invalid_input("Array expected"))?;
         let input = input.values().map(|v| v.to_value());
 
         let array = args
             .array
             .as_array()
+            .or_else(|| {
+                if args.array.is_nil() {
+                    Some(EMPTY_ARRAY.as_array().unwrap())
+                } else {
+                    None
+                }
+            })
             .ok_or_else(|| invalid_argument("array", "Array expected"))?;
         let array = array.values().map(|v| v.to_value());
 
