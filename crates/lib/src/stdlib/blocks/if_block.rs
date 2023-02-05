@@ -3,8 +3,9 @@ use std::io::Write;
 
 use liquid_core::error::ResultLiquidExt;
 use liquid_core::model::{ValueView, ValueViewCmp};
-use liquid_core::parser::BlockElement;
 use liquid_core::parser::TagToken;
+use liquid_core::parser::{BlockElement, ParsedBlockReflection};
+use liquid_core::runtime::RenderableReflection;
 use liquid_core::Expression;
 use liquid_core::Language;
 use liquid_core::Renderable;
@@ -192,6 +193,16 @@ impl Renderable for Conditional {
         }
 
         Ok(())
+    }
+
+    fn reflect(&self) -> RenderableReflection {
+        RenderableReflection::Block(self)
+    }
+}
+
+impl ParsedBlockReflection for Conditional {
+    fn block_reflection(&self) -> &dyn BlockReflection {
+        IfBlock::default().reflection()
     }
 }
 

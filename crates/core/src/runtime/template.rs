@@ -3,6 +3,7 @@ use std::io::Write;
 use crate::error::Result;
 
 use super::Renderable;
+use super::RenderableReflection;
 use super::Runtime;
 
 /// An executable template block.
@@ -36,5 +37,9 @@ impl Renderable for Template {
             }
         }
         Ok(())
+    }
+
+    fn reflection(&self) -> RenderableReflection {
+        RenderableReflection::Template(self)
     }
 }

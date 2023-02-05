@@ -1041,7 +1041,8 @@ impl<'a> TagToken<'a> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::runtime::{Runtime, RuntimeBuilder, Template};
+    use crate::parser::ParsedBlockReflection;
+    use crate::runtime::{RenderableReflection, Runtime, RuntimeBuilder, Template};
 
     #[test]
     fn test_parse_literal() {
@@ -1219,6 +1220,12 @@ mod test {
                 }
             }
 
+            impl ParsedBlockReflection for Custom {
+                fn block_reflection(&self) -> &dyn BlockReflection {
+                    CustomBlock {}.reflection()
+                }
+            }
+
             impl Renderable for Custom {
                 fn render_to(&self, writer: &mut dyn Write, runtime: &dyn Runtime) -> Result<()> {
                     write!(writer, "<pre>").replace("Failed to render")?;
@@ -1226,6 +1233,10 @@ mod test {
                     write!(writer, "</pre>").replace("Failed to render")?;
 
                     Ok(())
+                }
+
+                fn reflection(&self) -> RenderableReflection {
+                    RenderableReflection::Block(self)
                 }
             }
 

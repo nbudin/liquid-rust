@@ -1,8 +1,8 @@
 use std::io::Write;
 
 use crate::error::{Result, ResultLiquidReplaceExt};
-use crate::runtime::Renderable;
 use crate::runtime::Runtime;
+use crate::runtime::{Renderable, RenderableReflection};
 
 /// A raw template expression.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -21,5 +21,9 @@ impl Renderable for Text {
     fn render_to(&self, writer: &mut dyn Write, _runtime: &dyn Runtime) -> Result<()> {
         write!(writer, "{}", &self.text).replace("Failed to render")?;
         Ok(())
+    }
+
+    fn reflection(&self) -> RenderableReflection {
+        RenderableReflection::Text(&self.text)
     }
 }

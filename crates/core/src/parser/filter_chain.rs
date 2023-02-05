@@ -4,9 +4,9 @@ use std::io::Write;
 use super::Filter;
 use crate::error::{Result, ResultLiquidExt, ResultLiquidReplaceExt};
 use crate::model::{ValueCow, ValueView};
-use crate::runtime::Expression;
 use crate::runtime::Renderable;
 use crate::runtime::Runtime;
+use crate::runtime::{Expression, RenderableReflection};
 
 /// A `Value` expression.
 #[derive(Debug)]
@@ -59,5 +59,9 @@ impl Renderable for FilterChain {
         let entry = self.evaluate(runtime)?;
         write!(writer, "{}", entry.render()).replace("Failed to render")?;
         Ok(())
+    }
+
+    fn reflection(&self) -> RenderableReflection {
+        RenderableReflection::FilterChain(self)
     }
 }

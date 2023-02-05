@@ -21,6 +21,30 @@ pub trait BlockReflection {
     }
 }
 
+pub trait ParsedBlockReflection {
+    fn block_reflection(&self) -> &dyn BlockReflection;
+
+    fn start_tag(&self) -> &str {
+        self.block_reflection().start_tag()
+    }
+
+    fn end_tag(&self) -> &str {
+        self.block_reflection().end_tag()
+    }
+
+    fn description(&self) -> &str {
+        self.block_reflection().description()
+    }
+
+    fn example(&self) -> Option<&str> {
+        self.block_reflection().example()
+    }
+
+    fn spec(&self) -> Option<&str> {
+        self.block_reflection().spec()
+    }
+}
+
 /// A trait for creating custom custom block-size tags (`{% if something %}{% endif %}`).
 /// This is a simple type alias for a function.
 ///

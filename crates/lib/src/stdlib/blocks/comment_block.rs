@@ -1,6 +1,8 @@
 use std::io::Write;
 
 use liquid_core::parser::BlockElement;
+use liquid_core::parser::ParsedBlockReflection;
+use liquid_core::runtime::RenderableReflection;
 use liquid_core::Language;
 use liquid_core::Renderable;
 use liquid_core::Result;
@@ -69,6 +71,16 @@ struct Comment;
 impl Renderable for Comment {
     fn render_to(&self, _writer: &mut dyn Write, _runtime: &dyn Runtime) -> Result<()> {
         Ok(())
+    }
+
+    fn reflect(&self) -> RenderableReflection {
+        RenderableReflection::Block(self)
+    }
+}
+
+impl ParsedBlockReflection for Comment {
+    fn block_reflection(&self) -> &dyn BlockReflection {
+        CommentBlock::default().reflection()
     }
 }
 
