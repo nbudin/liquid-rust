@@ -1,6 +1,8 @@
 use std::io::Write;
 
 use liquid_core::error::ResultLiquidReplaceExt;
+use liquid_core::parser::ParsedBlockReflection;
+use liquid_core::runtime::RenderableReflection;
 use liquid_core::Language;
 use liquid_core::Renderable;
 use liquid_core::Result;
@@ -60,6 +62,16 @@ impl Renderable for RawT {
     fn render_to(&self, writer: &mut dyn Write, _runtime: &dyn Runtime) -> Result<()> {
         write!(writer, "{}", self.content).replace("Failed to render")?;
         Ok(())
+    }
+
+    fn reflection(&self) -> RenderableReflection {
+        RenderableReflection::Block(self)
+    }
+}
+
+impl ParsedBlockReflection for RawT {
+    fn block_reflection(&self) -> &dyn BlockReflection {
+        RawBlock::default().reflection()
     }
 }
 

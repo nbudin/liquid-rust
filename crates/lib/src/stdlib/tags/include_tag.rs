@@ -2,6 +2,7 @@ use std::io::Write;
 
 use liquid_core::error::ResultLiquidExt;
 use liquid_core::model::KString;
+use liquid_core::runtime::RenderableReflection;
 use liquid_core::Expression;
 use liquid_core::Language;
 use liquid_core::Renderable;
@@ -120,6 +121,10 @@ impl Renderable for Include {
         }
 
         Ok(())
+    }
+
+    fn reflection(&self) -> RenderableReflection {
+        RenderableReflection::Tag(Box::new(IncludeTag::default()))
     }
 }
 

@@ -1,6 +1,6 @@
 use std::io::Write;
 
-use liquid_core::runtime::{Interrupt, InterruptRegister};
+use liquid_core::runtime::{Interrupt, InterruptRegister, RenderableReflection};
 use liquid_core::Language;
 use liquid_core::Renderable;
 use liquid_core::Result;
@@ -53,6 +53,10 @@ impl Renderable for Break {
             .set(Interrupt::Break);
         Ok(())
     }
+
+    fn reflection(&self) -> RenderableReflection {
+        RenderableReflection::Tag(Box::new(BreakTag::default()))
+    }
 }
 
 #[derive(Copy, Clone, Debug, Default)]
@@ -100,6 +104,10 @@ impl Renderable for Continue {
             .get_mut::<InterruptRegister>()
             .set(Interrupt::Continue);
         Ok(())
+    }
+
+    fn reflection(&self) -> RenderableReflection {
+        RenderableReflection::Tag(Box::new(ContinueTag::default()))
     }
 }
 

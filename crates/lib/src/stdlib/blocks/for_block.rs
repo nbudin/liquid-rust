@@ -3,9 +3,9 @@ use std::io::Write;
 
 use liquid_core::error::{ResultLiquidExt, ResultLiquidReplaceExt};
 use liquid_core::model::{Object, ObjectView, Value, ValueCow, ValueView};
-use liquid_core::parser::BlockElement;
 use liquid_core::parser::TryMatchToken;
-use liquid_core::runtime::{Interrupt, InterruptRegister};
+use liquid_core::parser::{BlockElement, ParsedBlockReflection};
+use liquid_core::runtime::{Interrupt, InterruptRegister, RenderableReflection};
 use liquid_core::Expression;
 use liquid_core::Language;
 use liquid_core::Renderable;
@@ -222,6 +222,16 @@ impl Renderable for For {
             }
         }
         Ok(())
+    }
+
+    fn reflection(&self) -> RenderableReflection {
+        RenderableReflection::Block(self)
+    }
+}
+
+impl ParsedBlockReflection for For {
+    fn block_reflection(&self) -> &dyn BlockReflection {
+        ForBlock::default().reflection()
     }
 }
 
@@ -446,6 +456,16 @@ impl Renderable for TableRow {
         }
 
         Ok(())
+    }
+
+    fn reflection(&self) -> RenderableReflection {
+        RenderableReflection::Block(self)
+    }
+}
+
+impl ParsedBlockReflection for TableRow {
+    fn block_reflection(&self) -> &dyn BlockReflection {
+        TableRowBlock::default().reflection()
     }
 }
 

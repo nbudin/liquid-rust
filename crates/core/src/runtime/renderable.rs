@@ -10,7 +10,7 @@ use super::Runtime;
 pub enum RenderableReflection<'a> {
     Block(&'a dyn ParsedBlockReflection),
     FilterChain(&'a FilterChain),
-    Tag(&'a dyn TagReflection),
+    Tag(Box<dyn TagReflection + 'a>),
     Template(&'a Template),
     Text(&'a str),
 }

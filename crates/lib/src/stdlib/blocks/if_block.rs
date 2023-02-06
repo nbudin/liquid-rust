@@ -195,7 +195,7 @@ impl Renderable for Conditional {
         Ok(())
     }
 
-    fn reflect(&self) -> RenderableReflection {
+    fn reflection(&self) -> RenderableReflection {
         RenderableReflection::Block(self)
     }
 }

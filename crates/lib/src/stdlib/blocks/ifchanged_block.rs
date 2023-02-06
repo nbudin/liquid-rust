@@ -1,6 +1,8 @@
 use std::io::Write;
 
 use liquid_core::error::{ResultLiquidExt, ResultLiquidReplaceExt};
+use liquid_core::parser::ParsedBlockReflection;
+use liquid_core::runtime::RenderableReflection;
 use liquid_core::Language;
 use liquid_core::Renderable;
 use liquid_core::Result;
@@ -80,6 +82,16 @@ impl Renderable for IfChanged {
         }
 
         Ok(())
+    }
+
+    fn reflection(&self) -> RenderableReflection {
+        RenderableReflection::Block(self)
+    }
+}
+
+impl ParsedBlockReflection for IfChanged {
+    fn block_reflection(&self) -> &dyn BlockReflection {
+        IfChangedBlock::default().reflection()
     }
 }
 

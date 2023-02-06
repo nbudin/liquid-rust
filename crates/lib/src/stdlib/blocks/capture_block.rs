@@ -2,6 +2,8 @@ use std::io::Write;
 
 use liquid_core::error::ResultLiquidExt;
 use liquid_core::model::Value;
+use liquid_core::parser::ParsedBlockReflection;
+use liquid_core::runtime::RenderableReflection;
 use liquid_core::Language;
 use liquid_core::Renderable;
 use liquid_core::Result;
@@ -86,6 +88,16 @@ impl Renderable for Capture {
         let output = String::from_utf8(captured).expect("render only writes UTF-8");
         runtime.set_global(self.id.clone(), Value::scalar(output));
         Ok(())
+    }
+
+    fn reflection(&self) -> RenderableReflection {
+        RenderableReflection::Block(self)
+    }
+}
+
+impl ParsedBlockReflection for Capture {
+    fn block_reflection(&self) -> &dyn BlockReflection {
+        CaptureBlock::default().reflection()
     }
 }
 

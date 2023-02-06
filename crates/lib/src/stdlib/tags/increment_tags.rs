@@ -2,6 +2,7 @@ use std::io::Write;
 
 use liquid_core::error::ResultLiquidReplaceExt;
 use liquid_core::model::{Value, ValueView};
+use liquid_core::runtime::RenderableReflection;
 use liquid_core::Language;
 use liquid_core::Renderable;
 use liquid_core::Result;
@@ -68,6 +69,10 @@ impl Renderable for Increment {
         runtime.set_index(self.id.clone(), Value::scalar(val));
         Ok(())
     }
+
+    fn reflection(&self) -> RenderableReflection {
+        RenderableReflection::Tag(Box::new(IncrementTag::default()))
+    }
 }
 
 #[derive(Copy, Clone, Debug, Default)]
@@ -129,6 +134,10 @@ impl Renderable for Decrement {
         write!(writer, "{}", val).replace("Failed to render")?;
         runtime.set_index(self.id.clone(), Value::scalar(val));
         Ok(())
+    }
+
+    fn reflection(&self) -> RenderableReflection {
+        RenderableReflection::Tag(Box::new(DecrementTag::default()))
     }
 }
 

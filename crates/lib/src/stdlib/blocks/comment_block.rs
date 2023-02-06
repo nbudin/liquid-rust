@@ -73,7 +73,7 @@ impl Renderable for Comment {
         Ok(())
     }
 
-    fn reflect(&self) -> RenderableReflection {
+    fn reflection(&self) -> RenderableReflection {
         RenderableReflection::Block(self)
     }
 }

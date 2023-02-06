@@ -2,6 +2,7 @@ use std::io::Write;
 
 use liquid_core::error::ResultLiquidExt;
 use liquid_core::parser::FilterChain;
+use liquid_core::runtime::RenderableReflection;
 use liquid_core::Language;
 use liquid_core::Renderable;
 use liquid_core::Result;
@@ -82,6 +83,10 @@ impl Renderable for Assign {
             .into_owned();
         runtime.set_global(self.dst.clone(), value);
         Ok(())
+    }
+
+    fn reflection(&self) -> RenderableReflection {
+        RenderableReflection::Tag(Box::new(AssignTag::default()))
     }
 }
 

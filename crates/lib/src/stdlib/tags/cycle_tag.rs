@@ -4,6 +4,7 @@ use std::io::Write;
 use liquid_core::error::{ResultLiquidExt, ResultLiquidReplaceExt};
 use liquid_core::parser::TagToken;
 use liquid_core::parser::TryMatchToken;
+use liquid_core::runtime::RenderableReflection;
 use liquid_core::Expression;
 use liquid_core::Language;
 use liquid_core::Renderable;
@@ -131,6 +132,10 @@ impl Renderable for Cycle {
         let value = expr.evaluate(runtime).trace_with(|| self.trace().into())?;
         write!(writer, "{}", value.render()).replace("Failed to render")?;
         Ok(())
+    }
+
+    fn reflection(&self) -> RenderableReflection {
+        RenderableReflection::Tag(Box::new(CycleTag::default()))
     }
 }
 
